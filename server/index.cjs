@@ -856,6 +856,7 @@ app.all('/api/extract-content', async (req, res) => {
                     const items = [];
                     const seenValues = new Set();
                     const seenImageKeys = new Set();
+                    const actionUrlByKey = new Map();
 
                     // Strip noise
                     const clean = content
@@ -864,6 +865,13 @@ app.all('/api/extract-content', async (req, res) => {
                         .replace(/style=\{\{[\s\S]*?\}\}/g, '')
                         .replace(/console\.(log|error|warn|info)\s*\([\s\S]*?\);?/g, '')
                         .replace(/throw\s+new\s+Error\s*\([\s\S]*?\);?/g, '');
+
+                    // Map helper actions like handleAction('text-3', 'events') to URL targets.
+                    const actionRegex = /handleAction\s*\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]\s*\)/g;
+                    let actionMatch;
+                    while ((actionMatch = actionRegex.exec(clean)) !== null) {
+                        actionUrlByKey.set(actionMatch[1], actionMatch[2]);
+                    }
 
                     let match;
 
@@ -942,7 +950,7 @@ app.all('/api/extract-content', async (req, res) => {
                             // Try to find a corresponding getUrl call for the same key
                             const getUrlRegex = new RegExp(`getUrl\\s*\\(\\s*['"]${key}['"]\\s*,\\s*['"]([^'"]+)['"]\\s*\\)`, 'g');
                             const urlMatch = getUrlRegex.exec(clean);
-                            const url = urlMatch ? urlMatch[1] : undefined;
+                            const url = urlMatch ? urlMatch[1] : actionUrlByKey.get(key);
 
                             items.push({
                                 pos: match.index,

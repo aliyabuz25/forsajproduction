@@ -192,6 +192,26 @@ const isSectionVisibleInAdmin = (_section: Section) => {
     return true;
 };
 
+const PARTNER_KEY_REGEX = /^PARTNER_(\d+)_(NAME|TAG|ICON|USE_IMAGE|IMAGE_ID)$/;
+type PartnerField = 'name' | 'tag' | 'icon' | 'useImage' | 'imageId';
+type PartnerRow = {
+    index: number;
+    name: string;
+    tag: string;
+    icon: string;
+    useImage: string;
+    imageId: string;
+};
+
+const toPartnerField = (token: string): PartnerField | null => {
+    if (token === 'NAME') return 'name';
+    if (token === 'TAG') return 'tag';
+    if (token === 'ICON') return 'icon';
+    if (token === 'USE_IMAGE') return 'useImage';
+    if (token === 'IMAGE_ID') return 'imageId';
+    return null;
+};
+
 const componentLabels: Record<string, string> = {
     'hero': 'Giriş Hissəsi',
     'marquee': 'Sürüşən Yazı',
@@ -298,10 +318,21 @@ const VisualEditor: React.FC = () => {
                 const updatedContent = [...contentData];
                 const ensureAboutDefaults = (aboutPage: PageContent) => {
                     const sections = aboutPage.sections || [];
+                    const images = aboutPage.images || [];
 
                     const ensureSection = (id: string, label: string, value: string) => {
                         if (sections.some(s => s.id === id)) return;
                         sections.push({ id, type: 'text', label, value });
+                    };
+                    const ensureImage = (id: string, path: string, alt: string) => {
+                        if (images.some(i => i.id === id)) return;
+                        images.push({
+                            id,
+                            path,
+                            alt,
+                            type: 'remote',
+                            order: images.length
+                        });
                     };
 
                     // Ensure key "about" title fields always exist in panel
@@ -371,6 +402,12 @@ const VisualEditor: React.FC = () => {
                     const hasStatPairs = sections.some(s => s.id.includes('label-stat')) && sections.some(s => s.id.includes('value-stat'));
                     if (hasStatPairs) {
                         aboutPage.sections = sections;
+                        ensureImage(
+                            'img-992',
+                            'https://images.unsplash.com/photo-1541447271487-09612b3f49f7?q=80&w=1974&auto=format&fit=crop',
+                            'Forsaj Club Detail'
+                        );
+                        aboutPage.images = images;
                         return;
                     }
 
@@ -397,6 +434,62 @@ const VisualEditor: React.FC = () => {
                     });
 
                     aboutPage.sections = sections;
+                    ensureImage(
+                        'img-992',
+                        'https://images.unsplash.com/photo-1541447271487-09612b3f49f7?q=80&w=1974&auto=format&fit=crop',
+                        'Forsaj Club Detail'
+                    );
+                    aboutPage.images = images;
+                };
+                const ensurePartnersDefaults = (partnersPage: PageContent) => {
+                    const sections = partnersPage.sections || [];
+                    const images = partnersPage.images || [];
+
+                    const ensureSection = (id: string, label: string, value: string) => {
+                        if (sections.some(s => s.id === id)) return;
+                        sections.push({ id, type: 'text', label, value });
+                    };
+                    const ensureImage = (id: string) => {
+                        if (images.some(i => i.id === id)) return;
+                        images.push({ id, path: '', alt: id, type: 'local', order: images.length });
+                    };
+
+                    ensureSection('SECTION_TITLE', 'Bölmə Başlığı', 'RƏSMİ TƏRƏFDAŞLARIMIZ');
+
+                    const defaults = [
+                        { name: 'AZMF', tag: 'OFFICIAL PARTNER', icon: 'ShieldCheck' },
+                        { name: 'OFFROAD AZ', tag: 'OFFICIAL PARTNER', icon: 'Truck' },
+                        { name: 'GLOBAL 4X4', tag: 'OFFICIAL PARTNER', icon: 'Globe' },
+                        { name: 'RACE TECH', tag: 'OFFICIAL PARTNER', icon: 'Zap' }
+                    ];
+
+                    defaults.forEach((item, i) => {
+                        const idx = i + 1;
+                        ensureSection(`PARTNER_${idx}_NAME`, `Tərəfdaş ${idx} Ad`, item.name);
+                        ensureSection(`PARTNER_${idx}_TAG`, `Tərəfdaş ${idx} Etiket`, item.tag);
+                        ensureSection(`PARTNER_${idx}_ICON`, `Tərəfdaş ${idx} İkon`, item.icon);
+                        ensureSection(`PARTNER_${idx}_USE_IMAGE`, `Tərəfdaş ${idx} Görsel İstifadə`, 'false');
+                        ensureSection(`PARTNER_${idx}_IMAGE_ID`, `Tərəfdaş ${idx} Görsel ID`, `partner-image-${idx}`);
+                        ensureImage(`partner-image-${idx}`);
+                    });
+
+                    partnersPage.sections = sections;
+                    partnersPage.images = images;
+                };
+                const ensureHeroDefaults = (heroPage: PageContent) => {
+                    const sections = heroPage.sections || [];
+                    const ensureSection = (id: string, label: string, value: string, url?: string) => {
+                        const idx = sections.findIndex(s => s.id === id);
+                        if (idx === -1) {
+                            sections.push({ id, type: 'text', label, value, ...(url ? { url } : {}) });
+                            return;
+                        }
+                        if (url && !sections[idx].url) sections[idx].url = url;
+                    };
+
+                    ensureSection('text-3', 'Hero Düymə 1', 'YARIŞLARA BAX', 'events');
+                    ensureSection('text-4', 'Hero Düymə 2', 'HAQQIMIZDA', 'about');
+                    heroPage.sections = sections;
                 };
 
                 defaultIds.forEach(id => {
@@ -410,11 +503,19 @@ const VisualEditor: React.FC = () => {
                         });
                     } else if (id === 'about') {
                         ensureAboutDefaults(found);
+                    } else if (id === 'partners') {
+                        ensurePartnersDefaults(found);
+                    } else if (id === 'hero') {
+                        ensureHeroDefaults(found);
                     }
                 });
 
                 const aboutPage = updatedContent.find(p => p.id === 'about');
                 if (aboutPage) ensureAboutDefaults(aboutPage);
+                const partnersPage = updatedContent.find(p => p.id === 'partners');
+                if (partnersPage) ensurePartnersDefaults(partnersPage);
+                const heroPage = updatedContent.find(p => p.id === 'hero');
+                if (heroPage) ensureHeroDefaults(heroPage);
 
                 const defaultRank = new Map(defaultIds.map((id, idx) => [id, idx]));
                 updatedContent.sort((a, b) => {
@@ -767,6 +868,99 @@ const VisualEditor: React.FC = () => {
         );
         setPages(newPages);
         toast.success('Statistika silindi');
+    };
+
+    const getPartnerRows = (page: PageContent | undefined): PartnerRow[] => {
+        if (!page) return [];
+        const rows = new Map<number, PartnerRow>();
+        (page.sections || []).forEach((section) => {
+            const m = section.id.match(PARTNER_KEY_REGEX);
+            if (!m) return;
+            const idx = Number(m[1]);
+            const field = toPartnerField(m[2]);
+            if (!field) return;
+
+            const current = rows.get(idx) || {
+                index: idx,
+                name: '',
+                tag: 'OFFICIAL PARTNER',
+                icon: 'ShieldCheck',
+                useImage: 'false',
+                imageId: `partner-image-${idx}`
+            };
+            current[field] = section.value || '';
+            rows.set(idx, current);
+        });
+        return Array.from(rows.values()).sort((a, b) => a.index - b.index);
+    };
+
+    const rewritePartnerRows = (rows: PartnerRow[]) => {
+        if (selectedPageIndex < 0 || selectedPageIndex >= pages.length) return;
+        const newPages = [...pages];
+        const page = newPages[selectedPageIndex];
+        if (!page || page.id !== 'partners') return;
+
+        const restSections = (page.sections || []).filter(s => !PARTNER_KEY_REGEX.test(s.id));
+        const partnerSections: Section[] = [];
+
+        rows.forEach((row) => {
+            partnerSections.push(
+                { id: `PARTNER_${row.index}_NAME`, type: 'text', label: `Tərəfdaş ${row.index} Ad`, value: row.name },
+                { id: `PARTNER_${row.index}_TAG`, type: 'text', label: `Tərəfdaş ${row.index} Etiket`, value: row.tag },
+                { id: `PARTNER_${row.index}_ICON`, type: 'text', label: `Tərəfdaş ${row.index} İkon`, value: row.icon },
+                { id: `PARTNER_${row.index}_USE_IMAGE`, type: 'text', label: `Tərəfdaş ${row.index} Görsel İstifadə`, value: row.useImage },
+                { id: `PARTNER_${row.index}_IMAGE_ID`, type: 'text', label: `Tərəfdaş ${row.index} Görsel ID`, value: row.imageId || `partner-image-${row.index}` }
+            );
+        });
+
+        const existingImages = page.images || [];
+        const neededImageIds = new Set(rows.map(r => r.imageId || `partner-image-${r.index}`));
+        const nextImages = [...existingImages];
+        neededImageIds.forEach((id) => {
+            if (nextImages.some(img => img.id === id)) return;
+            nextImages.push({ id, path: '', alt: id, type: 'local', order: nextImages.length });
+        });
+
+        page.sections = [...restSections, ...partnerSections];
+        page.images = nextImages.map((img, idx) => ({ ...img, order: idx }));
+        setPages(newPages);
+    };
+
+    const updatePartnerRowField = (index: number, field: PartnerField, value: string) => {
+        const rows = getPartnerRows(pages[selectedPageIndex]).map(r => r.index === index ? { ...r, [field]: value } : r);
+        rewritePartnerRows(rows);
+    };
+
+    const addPartnerRow = () => {
+        const rows = getPartnerRows(pages[selectedPageIndex]);
+        const nextIndex = (rows[rows.length - 1]?.index || 0) + 1;
+        rows.push({
+            index: nextIndex,
+            name: `PARTNER ${nextIndex}`,
+            tag: 'OFFICIAL PARTNER',
+            icon: 'ShieldCheck',
+            useImage: 'false',
+            imageId: `partner-image-${nextIndex}`
+        });
+        rewritePartnerRows(rows);
+    };
+
+    const removePartnerRow = (index: number) => {
+        const rows = getPartnerRows(pages[selectedPageIndex]).filter(r => r.index !== index);
+        rewritePartnerRows(rows);
+    };
+
+    const movePartnerRow = (index: number, direction: 'up' | 'down') => {
+        const rows = getPartnerRows(pages[selectedPageIndex]);
+        const idx = rows.findIndex(r => r.index === index);
+        if (idx === -1) return;
+        const target = direction === 'up' ? idx - 1 : idx + 1;
+        if (target < 0 || target >= rows.length) return;
+        const temp = rows[idx];
+        rows[idx] = rows[target];
+        rows[target] = temp;
+        const normalized = rows.map((r, i) => ({ ...r, index: i + 1, imageId: r.imageId || `partner-image-${i + 1}` }));
+        rewritePartnerRows(normalized);
     };
 
     const openImageSelector = (pageIdx: number, imgId: string) => {
@@ -1350,6 +1544,7 @@ const VisualEditor: React.FC = () => {
     const displayedSections = (currentPage?.sections || []).filter(s => {
         if (!isSectionVisibleInAdmin(s)) return false;
         if (currentPage?.id === 'about' && isStatSectionId(s.id)) return false;
+        if (currentPage?.id === 'partners' && (PARTNER_KEY_REGEX.test(s.id) || s.id === 'SECTION_TITLE')) return false;
         if (!extractSectionKey(s) && looksLikeKeyToken(s.value)) return false;
         return !searchTerm ||
             s.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1380,6 +1575,8 @@ const VisualEditor: React.FC = () => {
             return rows.filter(row => row.label.toLowerCase().includes(q) || row.value.toLowerCase().includes(q));
         })()
         : [];
+
+    const partnerRows = currentPage?.id === 'partners' ? getPartnerRows(currentPage) : [];
 
     const displayedImages = (currentPage?.images || []).filter(i => {
         return !searchTerm ||
@@ -2136,6 +2333,101 @@ const VisualEditor: React.FC = () => {
                                                         {searchTerm ? 'Axtarışa uyğun statistika tapılmadı.' : 'Hələ statistika yoxdur. "Yeni Statistika" ilə əlavə edin.'}
                                                     </div>
                                                 )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {currentPage.id === 'partners' && (
+                                        <div className="field-group">
+                                            <div className="field-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <label><Trophy size={16} /> Tərəfdaş Kartları</label>
+                                                <button className="add-field-minimal" onClick={addPartnerRow}>
+                                                    <Plus size={14} /> Tərəfdaş Əlavə Et
+                                                </button>
+                                            </div>
+                                            <div style={{ marginBottom: '12px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px', fontWeight: 700 }}>Bölmə Başlığı</label>
+                                                <input
+                                                    type="text"
+                                                    value={currentPage.sections.find(s => s.id === 'SECTION_TITLE')?.value || ''}
+                                                    onChange={(e) => handleSectionChange(selectedPageIndex, 'SECTION_TITLE', 'value', e.target.value)}
+                                                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 700 }}
+                                                />
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                {partnerRows.map((row, idx) => {
+                                                    const canMoveUp = idx > 0;
+                                                    const canMoveDown = idx < partnerRows.length - 1;
+                                                    return (
+                                                        <div key={row.index} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', background: '#fff' }}>
+                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 200px auto', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                                                                <input
+                                                                    type="text"
+                                                                    value={row.name}
+                                                                    onChange={(e) => updatePartnerRowField(row.index, 'name', e.target.value)}
+                                                                    placeholder="Tərəfdaş adı"
+                                                                    style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                                                />
+                                                                <input
+                                                                    type="text"
+                                                                    value={row.tag}
+                                                                    onChange={(e) => updatePartnerRowField(row.index, 'tag', e.target.value)}
+                                                                    placeholder="Etiket"
+                                                                    style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                                                />
+                                                                <input
+                                                                    type="text"
+                                                                    value={row.icon}
+                                                                    onChange={(e) => updatePartnerRowField(row.index, 'icon', e.target.value)}
+                                                                    placeholder="ShieldCheck / Truck / Globe / Zap"
+                                                                    style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                                                />
+                                                                <div style={{ display: 'flex', gap: '6px' }}>
+                                                                    <button
+                                                                        title="Yuxarı"
+                                                                        onClick={() => movePartnerRow(row.index, 'up')}
+                                                                        disabled={!canMoveUp}
+                                                                        style={{ width: '30px', height: '30px', border: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px', color: canMoveUp ? '#334155' : '#cbd5e1' }}
+                                                                    >
+                                                                        <ChevronUp size={14} />
+                                                                    </button>
+                                                                    <button
+                                                                        title="Aşağı"
+                                                                        onClick={() => movePartnerRow(row.index, 'down')}
+                                                                        disabled={!canMoveDown}
+                                                                        style={{ width: '30px', height: '30px', border: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px', color: canMoveDown ? '#334155' : '#cbd5e1' }}
+                                                                    >
+                                                                        <ChevronDown size={14} />
+                                                                    </button>
+                                                                    <button
+                                                                        title="Sil"
+                                                                        onClick={() => removePartnerRow(row.index)}
+                                                                        style={{ width: '30px', height: '30px', border: '1px solid #fee2e2', background: '#fff', borderRadius: '8px', color: '#ef4444' }}
+                                                                    >
+                                                                        <Trash2 size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', gap: '8px', alignItems: 'center' }}>
+                                                                <select
+                                                                    value={row.useImage}
+                                                                    onChange={(e) => updatePartnerRowField(row.index, 'useImage', e.target.value)}
+                                                                    style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                                                >
+                                                                    <option value="false">İkon istifadə et</option>
+                                                                    <option value="true">Görsel istifadə et</option>
+                                                                </select>
+                                                                <input
+                                                                    type="text"
+                                                                    value={row.imageId}
+                                                                    onChange={(e) => updatePartnerRowField(row.index, 'imageId', e.target.value)}
+                                                                    placeholder="Görsel ID (Məs: partner-image-1)"
+                                                                    style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     )}
