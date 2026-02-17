@@ -12,6 +12,7 @@ const About: React.FC = () => {
     const doc = new DOMParser().parseFromString(value, 'text/html');
     return (doc.body.textContent || '').replace(/\u00a0/g, ' ').trim();
   };
+  const text = (id: string, fallback: string) => toPlainText(getText(id, fallback));
 
   const dynamicStats: any[] = [];
   const dynamicValues: any[] = [];
@@ -32,7 +33,7 @@ const About: React.FC = () => {
 
     Array.from(statBySuffix.values()).forEach((stat) => {
       if (stat.label && stat.value) {
-        dynamicStats.push({ label: stat.label, value: stat.value });
+        dynamicStats.push({ label: toPlainText(stat.label), value: toPlainText(stat.value) });
       }
     });
 
@@ -45,8 +46,8 @@ const About: React.FC = () => {
       const current = valueBySuffix.get(suffix) || {};
 
       if (section.id.includes('val-icon-')) current.icon = section.value;
-      if (section.id.includes('val-title-')) current.title = section.value;
-      if (section.id.includes('val-desc-')) current.desc = section.value;
+      if (section.id.includes('val-title-')) current.title = toPlainText(section.value);
+      if (section.id.includes('val-desc-')) current.desc = toPlainText(section.value);
       valueBySuffix.set(suffix, current);
     });
 
@@ -66,16 +67,16 @@ const About: React.FC = () => {
   }
 
   const stats = dynamicStats.length > 0 ? dynamicStats : [
-    { label: getText('txt-pi-lotlar-label-123', 'PİLOTLAR'), value: getGeneralText('STATS_PILOTS') || getText('txt-pi-lotlar-value-123', '140+') },
-    { label: getText('txt-yari-lar-label-123', 'YARIŞLAR'), value: getGeneralText('STATS_RACES') || getText('txt-yari-lar-value-123', '50+') },
-    { label: getText('txt-g-ncl-r-label-123', 'GƏNCLƏR'), value: getGeneralText('STATS_YOUTH') || getText('txt-g-ncl-r-value-123', '20+') },
+    { label: text('txt-pi-lotlar-label-123', 'PİLOTLAR'), value: toPlainText(getGeneralText('STATS_PILOTS') || getText('txt-pi-lotlar-value-123', '140+')) },
+    { label: text('txt-yari-lar-label-123', 'YARIŞLAR'), value: toPlainText(getGeneralText('STATS_RACES') || getText('txt-yari-lar-value-123', '50+')) },
+    { label: text('txt-g-ncl-r-label-123', 'GƏNCLƏR'), value: toPlainText(getGeneralText('STATS_YOUTH') || getText('txt-g-ncl-r-value-123', '20+')) },
   ];
 
   const values = dynamicValues.length > 0 ? dynamicValues : [
-    { icon: <Shield className="text-[#FF4D00]" />, title: getText('txt-val-safety-title-123', 'TƏHLÜKƏSİZLİK'), desc: getText('txt-val-safety-desc-123', 'EKSTREMAL İDMANDA CAN SAĞLIĞI BİZİM BİR NÖMRƏLİ QAYDAMIZDIR. BÜTÜN TEXNİKALARIMIZ FIA STANDARTLARINA UYĞUN YOXLANILIR.') },
-    { icon: <Users className="text-[#FF4D00]" />, title: getText('txt-val-community-title-123', 'İCMA RUHU'), desc: getText('txt-val-community-desc-123', 'FORSAJ BİR KLUBDAN DAHA ÇOX, SADİQ VƏ BÖYÜK BİR AİLƏDİR. BİRİMİZ HAMIMIZ, HAMIMIZ BİRİMİZ ÜÇÜN!') },
-    { icon: <Leaf className="text-[#FF4D00]" />, title: getText('txt-val-nature-title-123', 'TƏBİƏTİ QORU'), desc: getText('txt-val-nature-desc-123', 'BİZ OFFROAD EDƏRKƏN TƏBİƏTƏ ZƏRƏR VERMƏMƏYİ ÖZÜMÜZƏ BORC BİLİRİK. EKOLOJİ BALANS BİZİM ÜÇÜN MÜQƏDDƏSDİR.') },
-    { icon: <Zap className="text-[#FF4D00]" />, title: getText('txt-val-excellence-title-123', 'MÜKƏMMƏLLİK'), desc: getText('txt-val-excellence-desc-123', 'HƏR YARIŞDA, HƏR DÖNGƏDƏ DAHA YAXŞI OLMAĞA ÇALIŞIRIQ. TƏLİMLƏRİMİZ PEŞƏKAR İNSTRUKTORLAR TƏRƏFİNDƏN İDARƏ OLUNUR.') },
+    { icon: <Shield className="text-[#FF4D00]" />, title: text('txt-val-safety-title-123', 'TƏHLÜKƏSİZLİK'), desc: text('txt-val-safety-desc-123', 'EKSTREMAL İDMANDA CAN SAĞLIĞI BİZİM BİR NÖMRƏLİ QAYDAMIZDIR. BÜTÜN TEXNİKALARIMIZ FIA STANDARTLARINA UYĞUN YOXLANILIR.') },
+    { icon: <Users className="text-[#FF4D00]" />, title: text('txt-val-community-title-123', 'İCMA RUHU'), desc: text('txt-val-community-desc-123', 'FORSAJ BİR KLUBDAN DAHA ÇOX, SADİQ VƏ BÖYÜK BİR AİLƏDİR. BİRİMİZ HAMIMIZ, HAMIMIZ BİRİMİZ ÜÇÜN!') },
+    { icon: <Leaf className="text-[#FF4D00]" />, title: text('txt-val-nature-title-123', 'TƏBİƏTİ QORU'), desc: text('txt-val-nature-desc-123', 'BİZ OFFROAD EDƏRKƏN TƏBİƏTƏ ZƏRƏR VERMƏMƏYİ ÖZÜMÜZƏ BORC BİLİRİK. EKOLOJİ BALANS BİZİM ÜÇÜN MÜQƏDDƏSDİR.') },
+    { icon: <Zap className="text-[#FF4D00]" />, title: text('txt-val-excellence-title-123', 'MÜKƏMMƏLLİK'), desc: text('txt-val-excellence-desc-123', 'HƏR YARIŞDA, HƏR DÖNGƏDƏ DAHA YAXŞI OLMAĞA ÇALIŞIRIQ. TƏLİMLƏRİMİZ PEŞƏKAR İNSTRUKTORLAR TƏRƏFİNDƏN İDARƏ OLUNUR.') },
   ];
 
   return (
@@ -86,10 +87,10 @@ const About: React.FC = () => {
           <div className="w-2 h-16 bg-[#FF4D00] shadow-[0_0_15px_rgba(255,77,0,0.4)]"></div>
           <div>
             <h2 className="text-6xl md:text-8xl font-black italic tracking-tighter uppercase leading-none text-white">
-              {getText('txt-haqqimizda-904', 'HAQQIMIZDA')}
+              {text('txt-haqqimizda-904', 'HAQQIMIZDA')}
             </h2>
             <p className="text-[#FF4D00] font-black italic text-[11px] md:text-sm mt-2 uppercase tracking-[0.4em]">
-              {getText('txt-bi-zi-m-hekay-mi-z-m-888', 'BİZİM HEKAYƏMİZ // MİSSİYAMIZ VƏ GƏLƏCƏYİMİZ')}
+              {text('txt-bi-zi-m-hekay-mi-z-m-888', 'BİZİM HEKAYƏMİZ // MİSSİYAMIZ VƏ GƏLƏCƏYİMİZ')}
             </p>
           </div>
         </div>
@@ -106,7 +107,7 @@ const About: React.FC = () => {
             </h2>
             <p
               className="text-gray-400 font-bold italic text-sm md:text-base leading-relaxed mb-12 max-w-xl uppercase tracking-wide"
-              dangerouslySetInnerHTML={{ __html: bbcodeToHtml(getText('txt-klubumuz-sad-c-bir-552', 'Klubumuz sadəcə bir həvəskar qrupu deyil, ölkəmizi beynəlxalq ralli xəritəsinə daxil etməyi hədəfləyən rəsmi və peşəkar bir platformadır. 2018-ci ildən bəri biz 50-dən çox rəsmi yarış, 100-dən çox ekspedisiya və saysız-hesabsız adrenalin dolu anlar yaşamışıq.')) }}
+              dangerouslySetInnerHTML={{ __html: bbcodeToHtml(text('txt-klubumuz-sad-c-bir-552', 'Klubumuz sadəcə bir həvəskar qrupu deyil, ölkəmizi beynəlxalq ralli xəritəsinə daxil etməyi hədəfləyən rəsmi və peşəkar bir platformadır. 2018-ci ildən bəri biz 50-dən çox rəsmi yarış, 100-dən çox ekspedisiya və saysız-hesabsız adrenalin dolu anlar yaşamışıq.')) }}
             />
 
             <div className="flex flex-wrap gap-4">
@@ -137,17 +138,17 @@ const About: React.FC = () => {
         <div className="relative">
           <div className="w-10 h-1 bg-[#FF4D00] mb-8"></div>
           <h3 className="text-5xl font-black italic mb-8 uppercase tracking-tighter">
-            {getText('txt-bi-zi-m-mi-ssi-yamiz-424', 'BİZİM MİSSİYAMIZ')}
+            {text('txt-bi-zi-m-mi-ssi-yamiz-424', 'BİZİM MİSSİYAMIZ')}
           </h3>
           <p className="text-gray-400 font-bold italic text-sm leading-relaxed mb-12 max-w-lg uppercase tracking-wide">
-            {getText('txt-az-rbaycan-n-h-r-bir-45', 'Azərbaycanın hər bir guşəsində offroad idmanını təbliğ etmək, yerli pilotları beynəlxalq standartlara uyğun yetişdirmək və təbiəti qoruyaraq ekstremal adrenalin təcrübəsi bəxş etmək.')}
+            {text('txt-az-rbaycan-n-h-r-bir-45', 'Azərbaycanın hər bir guşəsində offroad idmanını təbliğ etmək, yerli pilotları beynəlxalq standartlara uyğun yetişdirmək və təbiəti qoruyaraq ekstremal adrenalin təcrübəsi bəxş etmək.')}
           </p>
           <div className="bg-[#FF4D00] p-5 inline-flex items-center gap-4 transform -skew-x-12 text-black shadow-[0_0_30px_rgba(255,77,0,0.2)]">
             <div className="bg-black p-2 text-[#FF4D00] transform skew-x-12 rounded-full">
               <Target size={20} />
             </div>
             <span className="font-black italic text-xs transform skew-x-12 uppercase">
-              {getText('txt-h-d-fi-mi-z-dakar-ral-50', 'HƏDƏFİMİZ: DAKAR RALLİ 2026')}
+              {text('txt-h-d-fi-mi-z-dakar-ral-50', 'HƏDƏFİMİZ: DAKAR RALLİ 2026')}
             </span>
           </div>
         </div>
@@ -155,17 +156,17 @@ const About: React.FC = () => {
         <div className="relative">
           <div className="w-10 h-1 bg-white/20 mb-8"></div>
           <h3 className="text-5xl font-black italic mb-8 uppercase tracking-tighter">
-            {getText('txt-bi-zi-m-baxi-imiz-944', 'BİZİM BAXIŞIMIZ')}
+            {text('txt-bi-zi-m-baxi-imiz-944', 'BİZİM BAXIŞIMIZ')}
           </h3>
           <p className="text-gray-400 font-bold italic text-sm leading-relaxed mb-12 max-w-lg uppercase tracking-wide">
-            {getText('txt-regionun-n-b-y-k-mo-901', 'Regionun ən böyük motorsport hubuna çevrilmək, rəqəmsal və fiziki infrastrukturlarla pilotlarımızı dəstəkləmək və motorsportu hər kəs üçün əlçatan bir ehtirasa çevirmək.')}
+            {text('txt-regionun-n-b-y-k-mo-901', 'Regionun ən böyük motorsport hubuna çevrilmək, rəqəmsal və fiziki infrastrukturlarla pilotlarımızı dəstəkləmək və motorsportu hər kəs üçün əlçatan bir ehtirasa çevirmək.')}
           </p>
           <div className="bg-white/5 border border-white/10 p-5 inline-flex items-center gap-4 transform -skew-x-12">
             <div className="bg-white/10 p-2 text-white transform skew-x-12 rounded-full border border-white/10">
               <Globe size={20} />
             </div>
             <span className="font-black italic text-xs text-white transform skew-x-12 uppercase">
-              {getText('txt-qafqazin-li-der-klubu-758', 'QAFQAZIN LİDER KLUBUNA ÇEVRİLMƏK')}
+              {text('txt-qafqazin-li-der-klubu-758', 'QAFQAZIN LİDER KLUBUNA ÇEVRİLMƏK')}
             </span>
           </div>
         </div>
@@ -175,10 +176,10 @@ const About: React.FC = () => {
     <section className="py-24 px-6 lg:px-20 bg-[#0A0A0A]">
       <div className="text-center mb-20">
         <h4 className="text-[#FF4D00] font-black italic text-[10px] tracking-[0.4em] mb-4 uppercase">
-          {getText('txt-fundamental-pri-nsi-pl-219', 'FUNDAMENTAL PRİNSİPLƏR')}
+          {text('txt-fundamental-pri-nsi-pl-219', 'FUNDAMENTAL PRİNSİPLƏR')}
         </h4>
         <h2 className="text-6xl font-black italic tracking-tighter uppercase leading-none text-white">
-          {getText('txt-sas-d-y-rl-ri-mi-z-482', 'ƏSAS DƏYƏRLƏRİMİZ')}
+          {text('txt-sas-d-y-rl-ri-mi-z-482', 'ƏSAS DƏYƏRLƏRİMİZ')}
         </h2>
       </div>
 
