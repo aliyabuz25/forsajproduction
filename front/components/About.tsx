@@ -10,15 +10,24 @@ const About: React.FC = () => {
   const dynamicStats: any[] = [];
 
   if (page?.sections) {
-    // Stats: label then value pairs
-    const statLabels = page.sections.filter(s => s.id.includes('label-stat'));
-    const statValues = page.sections.filter(s => s.id.includes('value-stat'));
+    const getStatSuffix = (id: string) => (id.split('label-stat-')[1] || id.split('value-stat-')[1] || '').trim();
+    const statBySuffix = new Map<string, { label?: string; value?: string }>();
 
-    for (let i = 0; i < statLabels.length; i++) {
-      if (statLabels[i] && statValues[i]) {
-        dynamicStats.push({ label: statLabels[i].value, value: statValues[i].value });
+    page.sections.forEach((section) => {
+      if (!section.id.includes('label-stat') && !section.id.includes('value-stat')) return;
+      const suffix = getStatSuffix(section.id) || section.id;
+      const current = statBySuffix.get(suffix) || {};
+
+      if (section.id.includes('label-stat')) current.label = section.value;
+      if (section.id.includes('value-stat')) current.value = section.value;
+      statBySuffix.set(suffix, current);
+    });
+
+    Array.from(statBySuffix.values()).forEach((stat) => {
+      if (stat.label && stat.value) {
+        dynamicStats.push({ label: stat.label, value: stat.value });
       }
-    }
+    });
   }
 
   const stats = dynamicStats.length > 0 ? dynamicStats : [

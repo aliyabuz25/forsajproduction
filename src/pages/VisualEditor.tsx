@@ -111,63 +111,6 @@ const QuillEditor: React.FC<{ value: string, onChange: (val: string) => void, id
     );
 };
 
-const looksLikeCodeText = (text?: string) => {
-    const value = (text || '').toLowerCase().trim();
-    if (!value) return false;
-
-    const codeMarkers = [
-        'import ',
-        'export ',
-        'const ',
-        'let ',
-        'var ',
-        'function ',
-        '=>',
-        'useeffect(',
-        'usestate(',
-        'classname=',
-        'onclick=',
-        'onsubmit=',
-        'fetch(',
-        'axios.',
-        'json.parse(',
-        'json.stringify(',
-        'return (',
-        'npm run',
-        'docker ',
-        'dockerfile',
-        'traefik.',
-        'nginx',
-        'mysql_',
-        'pathprefix(',
-        'hostsni(',
-        '/etc/',
-        'process.env',
-        'window.location',
-        'localhost'
-    ];
-
-    if (codeMarkers.some(marker => value.includes(marker))) return true;
-
-    const symbolCount = ((text || '').match(/[{}[\];]/g) || []).length;
-    return symbolCount > 10;
-};
-
-const CONTENT_KEY_PATTERNS = [
-    /^PAGE_/,
-    /^BTN_/,
-    /^SEO_/,
-    /^NAV_/,
-    /^MENU_/,
-    /^FOOTER_/,
-    /^META_/,
-    /^OG_/,
-    /^TITLE$/,
-    /^SUBTITLE$/,
-    /^DESCRIPTION$/,
-    /^KEYWORDS$/
-];
-
 const extractSectionKey = (section: Section) => {
     if (/^[A-Z0-9_]+$/.test(section.id)) return section.id.trim();
 
@@ -179,14 +122,8 @@ const extractSectionKey = (section: Section) => {
     return '';
 };
 
-const isContentKey = (key: string) => CONTENT_KEY_PATTERNS.some((pattern) => pattern.test(key));
-
-const isSectionBusinessEditable = (section: Section) => {
-    const key = extractSectionKey(section);
-    if (key) return isContentKey(key);
-
-    const combined = `${section.id} ${section.label} ${section.value} ${section.url || ''}`;
-    return !looksLikeCodeText(combined);
+const isSectionBusinessEditable = (_section: Section) => {
+    return true;
 };
 
 const canEditSectionField = (section: Section, field: 'value' | 'label' | 'url') => {
@@ -203,13 +140,7 @@ const canDeleteSection = (section: Section) => {
     return !extractSectionKey(section);
 };
 
-const UNDERSCORE_KEY_TOKEN = /\b[A-Z0-9]+(?:_[A-Z0-9]+)+\b/;
-
-const isSectionVisibleInAdmin = (section: Section) => {
-    const key = extractSectionKey(section);
-    if (key && key.includes('_')) return false;
-    if (UNDERSCORE_KEY_TOKEN.test((section.id || '').trim())) return false;
-    if (UNDERSCORE_KEY_TOKEN.test((section.label || '').trim())) return false;
+const isSectionVisibleInAdmin = (_section: Section) => {
     return true;
 };
 
@@ -313,17 +244,52 @@ const VisualEditor: React.FC = () => {
                     'site', 'settings', 'general', 'app'
                 ];
                 const updatedContent = [...contentData];
+                const ensureAboutStats = (aboutPage: PageContent) => {
+                    const sections = aboutPage.sections || [];
+                    const hasStatPairs = sections.some(s => s.id.includes('label-stat')) && sections.some(s => s.id.includes('value-stat'));
+                    if (hasStatPairs) return;
+
+                    const defaults = [
+                        { label: 'PİLOTLAR', value: '140+' },
+                        { label: 'YARIŞLAR', value: '50+' },
+                        { label: 'GƏNCLƏR', value: '20+' }
+                    ];
+
+                    defaults.forEach((item, index) => {
+                        const suffix = `${index + 1}`;
+                        sections.push({
+                            id: `label-stat-${suffix}`,
+                            type: 'text',
+                            label: `Statistika Etiketi ${index + 1}`,
+                            value: item.label
+                        });
+                        sections.push({
+                            id: `value-stat-${suffix}`,
+                            type: 'text',
+                            label: `Statistika Dəyəri ${index + 1}`,
+                            value: item.value
+                        });
+                    });
+
+                    aboutPage.sections = sections;
+                };
 
                 defaultIds.forEach(id => {
-                    if (!updatedContent.find(p => p.id === id)) {
+                    const found = updatedContent.find(p => p.id === id);
+                    if (!found) {
                         updatedContent.push({
                             id,
                             title: componentLabels[id] || id,
                             sections: [{ id: `${id}-default`, type: 'text', label: 'Bölmə', value: '' }],
                             images: []
                         });
+                    } else if (id === 'about') {
+                        ensureAboutStats(found);
                     }
                 });
+
+                const aboutPage = updatedContent.find(p => p.id === 'about');
+                if (aboutPage) ensureAboutStats(aboutPage);
                 setPages(updatedContent);
             }
 
