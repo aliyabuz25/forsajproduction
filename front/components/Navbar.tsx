@@ -26,6 +26,27 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
     { name: 'ƏLAQƏ', id: 'contact' },
   ];
 
+  const viewIds = new Set(['home', 'about', 'news', 'events', 'drivers', 'gallery', 'rules', 'contact']);
+  const normalize = (value: string) =>
+    (value || '')
+      .toLocaleLowerCase('az')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '');
+
+  const inferViewFromText = (value: string): string | null => {
+    const token = normalize(value);
+    if (token.includes('anashe')) return 'home';
+    if (token.includes('haqqimizda')) return 'about';
+    if (token.includes('xeber') || token.includes('xbr')) return 'news';
+    if (token.includes('tedbir') || token.includes('tdbir')) return 'events';
+    if (token.includes('surucu') || token.includes('src')) return 'drivers';
+    if (token.includes('qalereya')) return 'gallery';
+    if (token.includes('qayda')) return 'rules';
+    if (token.includes('elaqe') || token.includes('laq')) return 'contact';
+    return null;
+  };
+
   const navItems = (navbarPage?.sections || [])
     .filter((s) => {
       const label = (s.label || '').toUpperCase();
@@ -36,10 +57,27 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
       if (value.includes('SITE_LOGO') || value.includes('FORSAJ LOGO')) return false;
       return true;
     })
-    .map((s) => ({
-      name: s.value || s.label,
-      id: (s.url || '').trim()
-    }));
+    .map((s) => {
+      const name = (s.value || s.label || '').trim();
+      const rawUrl = (s.url || '').trim();
+      const inferred = inferViewFromText(name) || inferViewFromText(s.label || '');
+      const normalizedUrl = normalize(rawUrl);
+
+      let id = rawUrl;
+      if (!rawUrl.startsWith('http')) {
+        if (viewIds.has(rawUrl)) {
+          id = rawUrl;
+        } else if (viewIds.has(normalizedUrl)) {
+          id = normalizedUrl;
+        } else if (inferred) {
+          id = inferred;
+        } else {
+          id = 'home';
+        }
+      }
+
+      return { name, id };
+    });
 
   const resolvedNavItems = navItems.length > 0 ? navItems : defaultNavItems;
 
@@ -63,21 +101,20 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
             <h1 className="text-2xl font-black italic tracking-tighter flex items-center">
               <span className="text-white">FORSAJ</span>
               <span className="text-[#FF4D00] ml-1">CLUB</span>
-              <span className="text-[8px] text-gray-500 ml-2 opacity-50">FIXED</span>
             </h1>
           </div>
         )}
       </div>
 
       <div className="hidden lg:flex items-center gap-2 xl:gap-4">
-        {resolvedNavItems.map((item) => (
+        {resolvedNavItems.map((item, idx) => (
           <button
-            key={item.id}
+            key={`${item.id}-${idx}`}
             onClick={() => {
               if (item.id.startsWith('http')) {
                 window.open(item.id, '_blank');
               } else {
-                onViewChange(item.id as any);
+                onViewChange((viewIds.has(item.id) ? item.id : 'home') as any);
               }
             }}
             className={`px-4 py-2 text-[10px] xl:text-[11px] font-black italic transition-all uppercase tracking-tight relative transform -skew-x-12 ${currentView === item.id
