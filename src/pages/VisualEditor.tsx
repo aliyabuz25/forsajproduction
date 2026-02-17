@@ -143,6 +143,22 @@ const normalizePlainText = (value: string) => {
         .trim();
 };
 
+const containsHtmlNoise = (value: string) =>
+    /&(?:lt|gt|nbsp|quot|amp);|<\/?[a-z][^>]*>/i.test(value || '');
+
+const hasRichContentMarkers = (value: string) =>
+    /<(ul|ol|li|a|img|iframe|video|table|h[1-6])\b|\[(b|i|u|url|img|center)\]/i.test(value || '');
+
+const shouldForcePlainText = (section: Section) => {
+    const key = extractSectionKey(section);
+    if (key) return true;
+    if (isStatSectionId(section.id)) return true;
+    if (section.id.startsWith('txt-') || section.id.startsWith('val-')) return true;
+    if (section.id.startsWith('RULES_') || section.id.startsWith('PAGE_') || section.id.startsWith('BTN_') || section.id.startsWith('DOC_')) return true;
+    if (containsHtmlNoise(section.value || '') && !hasRichContentMarkers(section.value || '')) return true;
+    return false;
+};
+
 const STAT_LABEL_PREFIX = 'label-stat-';
 const STAT_VALUE_PREFIX = 'value-stat-';
 const isStatSectionId = (id: string) => id.startsWith(STAT_LABEL_PREFIX) || id.startsWith(STAT_VALUE_PREFIX);
@@ -393,17 +409,39 @@ const VisualEditor: React.FC = () => {
 
                 const aboutPage = updatedContent.find(p => p.id === 'about');
                 if (aboutPage) ensureAboutDefaults(aboutPage);
-                setPages(updatedContent);
+
+                const cleanedContent = updatedContent.map((page: PageContent) => ({
+                    ...page,
+                    sections: (page.sections || []).map((section) => {
+                        if (section.type !== 'text') return section;
+
+                        const forcePlain = shouldForcePlainText(section);
+                        const nextValue = forcePlain ? normalizePlainText(section.value || '') : (section.value || '').replace(/\u00a0/g, ' ');
+                        const nextLabel = containsHtmlNoise(section.label || '') ? normalizePlainText(section.label || '') : section.label;
+
+                        return {
+                            ...section,
+                            label: nextLabel,
+                            value: nextValue
+                        };
+                    })
+                }));
+
+                setPages(cleanedContent);
             }
 
-            // 2. Load Available Images (Keep legacy API for local scan)
-            fetch(`/api/all-images?v=${Date.now()}`)
-                .then(res => res.json())
-                .then(data => { if (data.local) setAllAvailableImages(data.local); });
+            // 2..7. Load all secondary resources in parallel to avoid slow UI boot.
+            const [imagesData, eventsData, newsData, driversData, photosData, videosData] = await Promise.all([
+                fetch(`/api/all-images?v=${Date.now()}`).then(res => res.json()).catch(() => ({})),
+                fetch('/api/events').then(res => res.json()).catch(() => []),
+                fetch('/api/news').then(res => res.json()).catch(() => []),
+                fetch('/api/drivers').then(res => res.json()).catch(() => []),
+                fetch('/api/gallery-photos').then(res => res.json()).catch(() => []),
+                fetch('/api/videos').then(res => res.json()).catch(() => [])
+            ]);
 
-            // 3. Load Events
-            const resEvents = await fetch('/api/events');
-            const eventsData = await resEvents.json();
+            if (imagesData?.local) setAllAvailableImages(imagesData.local);
+
             if (Array.isArray(eventsData)) {
                 setEvents(eventsData);
                 if (eventsData.length > 0 && selectedEventId === null) {
@@ -412,9 +450,6 @@ const VisualEditor: React.FC = () => {
                 }
             }
 
-            // 4. Load News
-            const resNews = await fetch('/api/news');
-            const newsData = await resNews.json();
             if (Array.isArray(newsData)) {
                 setNews(newsData);
                 if (newsData.length > 0 && selectedNewsId === null) {
@@ -423,9 +458,6 @@ const VisualEditor: React.FC = () => {
                 }
             }
 
-            // 5. Load Drivers
-            const resDrivers = await fetch('/api/drivers');
-            const driversData = await resDrivers.json();
             if (Array.isArray(driversData)) {
                 setDriverCategories(driversData);
                 if (driversData.length > 0 && selectedCatId === null) {
@@ -433,14 +465,8 @@ const VisualEditor: React.FC = () => {
                 }
             }
 
-            // 6. Load Gallery Photos
-            const resPhotos = await fetch('/api/gallery-photos');
-            const photosData = await resPhotos.json();
             if (Array.isArray(photosData)) setGalleryPhotos(photosData);
 
-            // 7. Load Videos
-            const resVideos = await fetch('/api/videos');
-            const videosData = await resVideos.json();
             if (Array.isArray(videosData)) {
                 setVideos(videosData);
                 if (videosData.length > 0 && selectedVideoId === null) {
@@ -454,16 +480,7 @@ const VisualEditor: React.FC = () => {
 
     useEffect(() => {
         loadContent();
-
-        // Auto-extract if it's the first time and we have no pages
-        const hasExtracted = localStorage.getItem('forsaj_extracted');
-        if (!hasExtracted && pages.length === 0 && !isExtracting) {
-            // We wait a bit to make sure pages are truly empty (fetch finished)
-            setTimeout(() => {
-                if (pages.length === 0) startExtraction();
-            }, 1000);
-        }
-    }, [pages.length]); // Removed editorMode from deps to avoid loop if we sync params
+    }, []);
 
     // Sync URL params to state
     useEffect(() => {
@@ -1306,6 +1323,21 @@ const VisualEditor: React.FC = () => {
             i.path.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
+    const shouldUseRichEditor = (section: Section) => {
+        const v = (section.value || '').toLowerCase();
+        // Only use heavy rich editor for explicit rich content.
+        return (
+            v.includes('<p') ||
+            v.includes('<br') ||
+            v.includes('[b]') ||
+            v.includes('[i]') ||
+            v.includes('[u]') ||
+            v.includes('[url') ||
+            v.includes('[img') ||
+            v.includes('[center]')
+        );
+    };
+
     return (
         <div className="visual-editor fade-in">
             <div className="editor-header">
@@ -2079,12 +2111,12 @@ const VisualEditor: React.FC = () => {
                                                                     {editable ? (key ? '• Açar mətn' : '• Mətn sahəsi') : '• Kilidli sistem sahəsi'}
                                                                 </span>
                                                             </div>
-                                                            {key ? (
+                                                            {key || !shouldUseRichEditor(section) ? (
                                                                 <textarea
                                                                     value={section.value || ''}
                                                                     onChange={(e) => handleSectionChange(selectedPageIndex, section.id, 'value', e.target.value)}
                                                                     disabled={!editableValue}
-                                                                    rows={3}
+                                                                    rows={4}
                                                                     style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', lineHeight: '1.4', resize: 'vertical' }}
                                                                 />
                                                             ) : (

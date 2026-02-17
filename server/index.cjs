@@ -72,10 +72,12 @@ const initDB = async (retries = 10) => {
                 )
             `);
             console.log('Database initialized: users, applications, and site_content tables ready');
+            dbReady = true;
             await migrateFilesToDB();
             connection.release();
             return; // Success
         } catch (error) {
+            dbReady = false;
             console.error(`Database initialization attempt failed (${retries} retries left):`, error.message);
             retries -= 1;
             if (retries > 0) {
@@ -152,12 +154,24 @@ const ensureRuntimeDirs = () => {
 };
 ensureRuntimeDirs();
 
+const CONTENT_FILE_PATHS = {
+    'site-content': SITE_CONTENT_PATH,
+    'events': EVENTS_FILE_PATH,
+    'news': NEWS_FILE_PATH,
+    'gallery-photos': GALLERY_PHOTOS_FILE_PATH,
+    'videos': VIDEOS_FILE_PATH,
+    'drivers': DRIVERS_FILE_PATH
+};
+
+let dbReady = false;
+
 // ------------------------------------------
 // DATABASE HELPERS & MIGRATION
 // ------------------------------------------
 // ... (migration logic uses these paths)
 
 const getContentFromDB = async (id) => {
+    if (!dbReady) return null;
     try {
         const [rows] = await pool.query('SELECT content_data FROM site_content WHERE id = ?', [id]);
         if (rows.length > 0) {
@@ -166,11 +180,13 @@ const getContentFromDB = async (id) => {
         return null;
     } catch (error) {
         console.error(`Error getting content for ${id}:`, error);
+        dbReady = false;
         return null;
     }
 };
 
 const saveContentToDB = async (id, data) => {
+    if (!dbReady) return false;
     try {
         const jsonData = JSON.stringify(data);
         await pool.query(
@@ -180,8 +196,48 @@ const saveContentToDB = async (id, data) => {
         return true;
     } catch (error) {
         console.error(`Error saving content for ${id}:`, error);
+        dbReady = false;
         return false;
     }
+};
+
+const getContentFromFile = async (id) => {
+    const filePath = CONTENT_FILE_PATHS[id];
+    if (!filePath) return null;
+    try {
+        const raw = await fsPromises.readFile(filePath, 'utf8');
+        return JSON.parse(raw);
+    } catch {
+        return null;
+    }
+};
+
+const saveContentToFile = async (id, data) => {
+    const filePath = CONTENT_FILE_PATHS[id];
+    if (!filePath) return false;
+    try {
+        await fsPromises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+        return true;
+    } catch (error) {
+        console.error(`Error saving content file for ${id}:`, error);
+        return false;
+    }
+};
+
+const getContent = async (id, fallback = []) => {
+    const dbData = await getContentFromDB(id);
+    if (dbData !== null) return dbData;
+
+    const fileData = await getContentFromFile(id);
+    if (fileData !== null) return fileData;
+
+    return fallback;
+};
+
+const saveContent = async (id, data) => {
+    const dbSaved = await saveContentToDB(id, data);
+    const fileSaved = await saveContentToFile(id, data);
+    return dbSaved || fileSaved;
 };
 
 const migrateFilesToDB = async () => {
@@ -284,8 +340,8 @@ app.use('/uploads', express.static(UPLOAD_DIR_PATH));
 // API: Get Gallery Photos
 app.get('/api/gallery-photos', async (req, res) => {
     try {
-        const data = await getContentFromDB('gallery-photos');
-        res.json(data || []);
+        const data = await getContent('gallery-photos', []);
+        res.json(data);
     } catch (error) {
         console.error('Error reading gallery photos:', error);
         res.status(500).json({ error: 'Failed to read gallery photos' });
@@ -296,7 +352,8 @@ app.get('/api/gallery-photos', async (req, res) => {
 app.post('/api/gallery-photos', async (req, res) => {
     try {
         const photos = req.body;
-        await saveContentToDB('gallery-photos', photos);
+        const ok = await saveContent('gallery-photos', photos);
+        if (!ok) return res.status(500).json({ error: 'Failed to save gallery photos' });
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving gallery photos:', error);
@@ -323,8 +380,8 @@ const saveUsers = async (users) => {
 // API: Get Events
 app.get('/api/events', async (req, res) => {
     try {
-        const data = await getContentFromDB('events');
-        res.json(data || []);
+        const data = await getContent('events', []);
+        res.json(data);
     } catch (error) {
         console.error('Error reading events:', error);
         res.status(500).json({ error: 'Failed to read events' });
@@ -335,7 +392,8 @@ app.get('/api/events', async (req, res) => {
 app.post('/api/events', async (req, res) => {
     try {
         const events = req.body;
-        await saveContentToDB('events', events);
+        const ok = await saveContent('events', events);
+        if (!ok) return res.status(500).json({ error: 'Failed to save events' });
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving events:', error);
@@ -346,8 +404,8 @@ app.post('/api/events', async (req, res) => {
 // API: Get News
 app.get('/api/news', async (req, res) => {
     try {
-        const data = await getContentFromDB('news');
-        res.json(data || []);
+        const data = await getContent('news', []);
+        res.json(data);
     } catch (error) {
         console.error('Error reading news:', error);
         res.status(500).json({ error: 'Failed to read news' });
@@ -357,7 +415,8 @@ app.get('/api/news', async (req, res) => {
 app.post('/api/news', async (req, res) => {
     try {
         const news = req.body;
-        await saveContentToDB('news', news);
+        const ok = await saveContent('news', news);
+        if (!ok) return res.status(500).json({ error: 'Failed to save news' });
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving news:', error);
@@ -540,7 +599,8 @@ app.get('/api/videos', async (req, res) => {
 app.post('/api/videos', async (req, res) => {
     try {
         const videos = req.body;
-        await saveContentToDB('videos', videos);
+        const ok = await saveContent('videos', videos);
+        if (!ok) return res.status(500).json({ error: 'Failed to save videos' });
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving videos:', error);
@@ -581,7 +641,8 @@ app.post('/api/upload-image', upload.single('image'), (req, res) => {
 app.post('/api/save-content', async (req, res) => {
     try {
         const content = req.body;
-        await saveContentToDB('site-content', content);
+        const ok = await saveContent('site-content', content);
+        if (!ok) return res.status(500).json({ error: 'Failed to save content' });
         res.json({ success: true });
     } catch (error) {
         console.error('Save error:', error);
@@ -592,8 +653,8 @@ app.post('/api/save-content', async (req, res) => {
 // API: Get Site Content
 app.get('/api/site-content', async (req, res) => {
     try {
-        const data = await getContentFromDB('site-content');
-        res.json(data || []);
+        const data = await getContent('site-content', []);
+        res.json(data);
     } catch (error) {
         console.error('Error reading site content:', error);
         res.status(500).json({ error: 'Failed to read site content' });
@@ -603,8 +664,8 @@ app.get('/api/site-content', async (req, res) => {
 // API: Get Drivers
 app.get('/api/drivers', async (req, res) => {
     try {
-        const data = await getContentFromDB('drivers');
-        res.json(data || []);
+        const data = await getContent('drivers', []);
+        res.json(data);
     } catch (error) {
         console.error('Error reading drivers:', error);
         res.status(500).json({ error: 'Failed to read drivers' });
@@ -633,7 +694,8 @@ app.post('/api/drivers', async (req, res) => {
             });
         }
 
-        await saveContentToDB('drivers', categories);
+        const ok = await saveContent('drivers', categories);
+        if (!ok) return res.status(500).json({ error: 'Failed to save drivers' });
         res.json({ success: true, data: categories });
     } catch (error) {
         console.error('Error saving drivers:', error);
