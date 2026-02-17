@@ -255,8 +255,6 @@ const VisualEditor: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
     const [isAddingNewFromSystem, setIsAddingNewFromSystem] = useState(false);
-    const [isItemModalOpen, setIsItemModalOpen] = useState(false);
-    const [editingType, setEditingType] = useState<'news' | 'event' | null>(null);
     const [allAvailableImages, setAllAvailableImages] = useState<string[]>([]);
     const [activeImageField, setActiveImageField] = useState<{ pageIdx: number, imgId: string } | null>(null);
     const [newSectionTitle, setNewSectionTitle] = useState('');
@@ -620,13 +618,6 @@ const VisualEditor: React.FC = () => {
             if (idx !== -1) setSelectedPageIndex(idx);
         }
     }, [location.search, pages]);
-
-    useEffect(() => {
-        if (editorMode !== 'news' && editorMode !== 'events' && isItemModalOpen) {
-            setIsItemModalOpen(false);
-            setEditingType(null);
-        }
-    }, [editorMode, isItemModalOpen]);
 
     const startExtraction = async () => {
         setIsExtracting(true);
@@ -1095,8 +1086,6 @@ const VisualEditor: React.FC = () => {
         if (evt) {
             setSelectedEventId(id);
             setEventForm({ ...evt });
-            setEditingType('event');
-            setIsItemModalOpen(true);
         }
     };
 
@@ -1157,8 +1146,6 @@ const VisualEditor: React.FC = () => {
         if (item) {
             setSelectedNewsId(id);
             setNewsForm({ ...item });
-            setEditingType('news');
-            setIsItemModalOpen(true);
         }
     };
 
@@ -1724,10 +1711,94 @@ const VisualEditor: React.FC = () => {
                     </aside>
 
                     <main className="editor-canvas" style={{ padding: '0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', flexDirection: 'column', gap: '1rem' }}>
-                            <FileText size={48} style={{ opacity: 0.2 }} />
-                            <p>Redaktə etmək üçün sol tərəfdən xəbər seçin və ya yeni yaradın.</p>
-                        </div>
+                        {selectedNewsId !== null && newsForm.id !== undefined ? (
+                            <div style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
+                                <div className="canvas-header" style={{ marginBottom: '2rem', borderBottom: '1px solid #eee', paddingBottom: '1rem' }}>
+                                    <h2 style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <FileText size={22} /> Xəbəri Redaktə Et
+                                    </h2>
+                                    <p style={{ color: '#64748b' }}>{newsForm.title} // ID: {newsForm.id}</p>
+                                </div>
+
+                                <div className="edit-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                    <div className="form-group">
+                                        <label>BAŞLIQ (AZ)</label>
+                                        <input
+                                            type="text"
+                                            value={newsForm.title}
+                                            onChange={(e) => handleNewsChange('title', e.target.value, newsForm.id)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>TARİX</label>
+                                        <input
+                                            type="date"
+                                            value={newsForm.date}
+                                            onChange={(e) => handleNewsChange('date', e.target.value, newsForm.id)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>KATEQORİYA</label>
+                                        <input
+                                            type="text"
+                                            value={newsForm.category}
+                                            onChange={(e) => handleNewsChange('category', e.target.value, newsForm.id)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>VƏZİYYƏT</label>
+                                        <select
+                                            value={newsForm.status}
+                                            onChange={(e) => handleNewsChange('status', e.target.value, newsForm.id)}
+                                        >
+                                            <option value="draft">Qaralama</option>
+                                            <option value="published">Dərc edilib</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                        <label>ŞƏKİL</label>
+                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                            <input
+                                                type="text"
+                                                value={newsForm.img}
+                                                onChange={(e) => handleNewsChange('img', e.target.value, newsForm.id)}
+                                                style={{ flex: 1 }}
+                                            />
+                                            <input
+                                                type="file"
+                                                id="news-full-img"
+                                                style={{ display: 'none' }}
+                                                onChange={async (e) => {
+                                                    const f = e.target.files?.[0];
+                                                    if (f) {
+                                                        const url = await uploadImage(f);
+                                                        if (url) handleNewsChange('img', url, newsForm.id);
+                                                    }
+                                                }}
+                                            />
+                                            <button onClick={() => document.getElementById('news-full-img')?.click()} className="btn-secondary">Yüklə</button>
+                                        </div>
+                                    </div>
+                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                        <label>MƏZMUN</label>
+                                        <QuillEditor
+                                            id="news-full-desc"
+                                            value={newsForm.description || ''}
+                                            onChange={(val: string) => handleNewsChange('description', val, newsForm.id)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                                    <button className="btn-primary" onClick={saveChanges}>Yadda Saxla</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', flexDirection: 'column', gap: '1rem' }}>
+                                <FileText size={48} style={{ opacity: 0.2 }} />
+                                <p>Redaktə etmək üçün sol tərəfdən xəbər seçin və ya yeni yaradın.</p>
+                            </div>
+                        )}
                     </main>
                 </div>
             ) : editorMode === 'events' ? (
@@ -1769,10 +1840,119 @@ const VisualEditor: React.FC = () => {
                     </aside>
 
                     <main className="editor-canvas" style={{ padding: '0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', flexDirection: 'column', gap: '1rem' }}>
-                            <Calendar size={48} style={{ opacity: 0.2 }} />
-                            <p>Redaktə etmək üçün sol tərəfdən tədbir seçin və ya yeni yaradın.</p>
-                        </div>
+                        {selectedEventId !== null && eventForm.id !== undefined ? (
+                            <div style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
+                                <div className="canvas-header" style={{ marginBottom: '2rem', borderBottom: '1px solid #eee', paddingBottom: '1rem' }}>
+                                    <h2 style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <Calendar size={22} /> Tədbiri Redaktə Et
+                                    </h2>
+                                    <p style={{ color: '#64748b' }}>{eventForm.title} // ID: {eventForm.id}</p>
+                                </div>
+
+                                <div className="edit-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                    <div className="form-group">
+                                        <label>TƏDBİR ADI</label>
+                                        <input
+                                            type="text"
+                                            value={eventForm.title}
+                                            onChange={(e) => handleEventChange('title', e.target.value, eventForm.id)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>TARİX</label>
+                                        <input
+                                            type="date"
+                                            value={eventForm.date}
+                                            onChange={(e) => handleEventChange('date', e.target.value, eventForm.id)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>MƏKAN</label>
+                                        <input
+                                            type="text"
+                                            value={eventForm.location}
+                                            onChange={(e) => handleEventChange('location', e.target.value, eventForm.id)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>KATEQORİYA</label>
+                                        <input
+                                            type="text"
+                                            value={eventForm.category}
+                                            onChange={(e) => handleEventChange('category', e.target.value, eventForm.id)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>VƏZİYYƏT</label>
+                                        <select
+                                            value={eventForm.status}
+                                            onChange={(e) => handleEventChange('status', e.target.value, eventForm.id)}
+                                        >
+                                            <option value="planned">Gələcək</option>
+                                            <option value="past">Keçmiş</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                        <label>ŞƏKİL</label>
+                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                            <input
+                                                type="text"
+                                                value={eventForm.img}
+                                                onChange={(e) => handleEventChange('img', e.target.value, eventForm.id)}
+                                                style={{ flex: 1 }}
+                                            />
+                                            <input
+                                                type="file"
+                                                id="event-full-img"
+                                                style={{ display: 'none' }}
+                                                onChange={async (e) => {
+                                                    const f = e.target.files?.[0];
+                                                    if (f) {
+                                                        const url = await uploadImage(f);
+                                                        if (url) handleEventChange('img', url, eventForm.id);
+                                                    }
+                                                }}
+                                            />
+                                            <button onClick={() => document.getElementById('event-full-img')?.click()} className="btn-secondary">Yüklə</button>
+                                        </div>
+                                    </div>
+                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                        <label>TƏSVİR</label>
+                                        <QuillEditor
+                                            id="event-full-desc"
+                                            value={eventForm.description || ''}
+                                            onChange={(val: string) => handleEventChange('description', val, eventForm.id)}
+                                        />
+                                    </div>
+                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                        <label>PDF URL</label>
+                                        <input
+                                            type="text"
+                                            value={eventForm.pdfUrl || ''}
+                                            onChange={(e) => handleEventChange('pdfUrl', e.target.value, eventForm.id)}
+                                            placeholder="https://.../rules.pdf"
+                                        />
+                                    </div>
+                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                        <label>QAYDALAR</label>
+                                        <QuillEditor
+                                            id="event-full-rules"
+                                            value={eventForm.rules || ''}
+                                            onChange={(val: string) => handleEventChange('rules', val, eventForm.id)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                                    <button className="btn-primary" onClick={saveChanges}>Yadda Saxla</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', flexDirection: 'column', gap: '1rem' }}>
+                                <Calendar size={48} style={{ opacity: 0.2 }} />
+                                <p>Redaktə etmək üçün sol tərəfdən tədbir seçin və ya yeni yaradın.</p>
+                            </div>
+                        )}
                     </main>
                 </div>
             ) : editorMode === 'drivers' ? (
@@ -2790,172 +2970,6 @@ const VisualEditor: React.FC = () => {
                     </div>
                 )
             }
-            {/* Item Editor Modal (News/Events) */}
-            {isItemModalOpen && (
-                <div className="modal-overlay" onClick={() => setIsItemModalOpen(false)}>
-                    <div className="modal-card full-screen fade-in" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                {editingType === 'news' ? <FileText size={20} /> : <Calendar size={20} />}
-                                {editingType === 'news' ? 'Xəbəri Redaktə Et' : 'Tədbiri Redaktə Et'}
-                            </h3>
-                            <button onClick={() => setIsItemModalOpen(false)}><X size={20} /></button>
-                        </div>
-                        <div className="modal-body">
-                            {editingType === 'news' ? (
-                                <div className="edit-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                                    <div className="form-group">
-                                        <label>BAŞLIQ (AZ)</label>
-                                        <input
-                                            type="text"
-                                            value={newsForm.title}
-                                            onChange={(e) => handleNewsChange('title', e.target.value, newsForm.id)}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>TARİX</label>
-                                        <input
-                                            type="date"
-                                            value={newsForm.date}
-                                            onChange={(e) => handleNewsChange('date', e.target.value, newsForm.id)}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>KATEQORİYA</label>
-                                        <input
-                                            type="text"
-                                            value={newsForm.category}
-                                            onChange={(e) => handleNewsChange('category', e.target.value, newsForm.id)}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>VƏZİYYƏT</label>
-                                        <select
-                                            value={newsForm.status}
-                                            onChange={(e) => handleNewsChange('status', e.target.value, newsForm.id)}
-                                        >
-                                            <option value="draft">Qaralama</option>
-                                            <option value="published">Dərc edilib</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                        <label>ŞƏKİL</label>
-                                        <div style={{ display: 'flex', gap: '10px' }}>
-                                            <input
-                                                type="text"
-                                                value={newsForm.img}
-                                                onChange={(e) => handleNewsChange('img', e.target.value, newsForm.id)}
-                                                style={{ flex: 1 }}
-                                            />
-                                            <input type="file" id="news-modal-img" style={{ display: 'none' }} onChange={async (e) => {
-                                                const f = e.target.files?.[0]; if (f) { const url = await uploadImage(f); if (url) handleNewsChange('img', url, newsForm.id); }
-                                            }} />
-                                            <button onClick={() => document.getElementById('news-modal-img')?.click()} className="btn-secondary">Yüklə</button>
-                                        </div>
-                                    </div>
-                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                        <label>MƏZMUN</label>
-                                        <QuillEditor
-                                            id="news-modal-desc"
-                                            value={newsForm.description || ''}
-                                            onChange={(val: string) => handleNewsChange('description', val, newsForm.id)}
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="edit-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                                    <div className="form-group">
-                                        <label>TƏDBİR ADI</label>
-                                        <input
-                                            type="text"
-                                            value={eventForm.title}
-                                            onChange={(e) => handleEventChange('title', e.target.value, eventForm.id)}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>TARİX</label>
-                                        <input
-                                            type="date"
-                                            value={eventForm.date}
-                                            onChange={(e) => handleEventChange('date', e.target.value, eventForm.id)}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>MƏKAN</label>
-                                        <input
-                                            type="text"
-                                            value={eventForm.location}
-                                            onChange={(e) => handleEventChange('location', e.target.value, eventForm.id)}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>KATEQORİYA</label>
-                                        <input
-                                            type="text"
-                                            value={eventForm.category}
-                                            onChange={(e) => handleEventChange('category', e.target.value, eventForm.id)}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>VƏZİYYƏT</label>
-                                        <select
-                                            value={eventForm.status}
-                                            onChange={(e) => handleEventChange('status', e.target.value, eventForm.id)}
-                                        >
-                                            <option value="planned">Gələcək</option>
-                                            <option value="past">Keçmiş</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                        <label>ŞƏKİL</label>
-                                        <div style={{ display: 'flex', gap: '10px' }}>
-                                            <input
-                                                type="text"
-                                                value={eventForm.img}
-                                                onChange={(e) => handleEventChange('img', e.target.value, eventForm.id)}
-                                                style={{ flex: 1 }}
-                                            />
-                                            <input type="file" id="event-modal-img" style={{ display: 'none' }} onChange={async (e) => {
-                                                const f = e.target.files?.[0]; if (f) { const url = await uploadImage(f); if (url) handleEventChange('img', url, eventForm.id); }
-                                            }} />
-                                            <button onClick={() => document.getElementById('event-modal-img')?.click()} className="btn-secondary">Yüklə</button>
-                                        </div>
-                                    </div>
-                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                        <label>TƏSVİR</label>
-                                        <QuillEditor
-                                            id="event-modal-desc"
-                                            value={eventForm.description || ''}
-                                            onChange={(val: string) => handleEventChange('description', val, eventForm.id)}
-                                        />
-                                    </div>
-                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                        <label>PDF URL</label>
-                                        <input
-                                            type="text"
-                                            value={eventForm.pdfUrl || ''}
-                                            onChange={(e) => handleEventChange('pdfUrl', e.target.value, eventForm.id)}
-                                            placeholder="https://.../rules.pdf"
-                                        />
-                                    </div>
-                                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                        <label>QAYDALAR</label>
-                                        <QuillEditor
-                                            id="event-modal-rules"
-                                            value={eventForm.rules || ''}
-                                            onChange={(val: string) => handleEventChange('rules', val, eventForm.id)}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn-secondary" onClick={() => setIsItemModalOpen(false)}>Bağla</button>
-                            <button className="btn-primary" onClick={() => { setIsItemModalOpen(false); saveChanges(); }}>Yadda Saxla</button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div >
     );
 };
