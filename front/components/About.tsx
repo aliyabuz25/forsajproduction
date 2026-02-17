@@ -1,4 +1,5 @@
 import React from 'react';
+import { Target, Globe, Shield, Users, Leaf, Zap } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
 import { bbcodeToHtml } from '../utils/bbcode';
 
@@ -8,6 +9,7 @@ const About: React.FC = () => {
   const page = getPage('about');
 
   const dynamicStats: any[] = [];
+  const dynamicValues: any[] = [];
 
   if (page?.sections) {
     const getStatSuffix = (id: string) => (id.split('label-stat-')[1] || id.split('value-stat-')[1] || '').trim();
@@ -28,6 +30,34 @@ const About: React.FC = () => {
         dynamicStats.push({ label: stat.label, value: stat.value });
       }
     });
+
+    const getValueSuffix = (id: string) => (id.split('val-icon-')[1] || id.split('val-title-')[1] || id.split('val-desc-')[1] || '').trim();
+    const valueBySuffix = new Map<string, { icon?: string; title?: string; desc?: string }>();
+
+    page.sections.forEach((section) => {
+      if (!section.id.includes('val-icon-') && !section.id.includes('val-title-') && !section.id.includes('val-desc-')) return;
+      const suffix = getValueSuffix(section.id) || section.id;
+      const current = valueBySuffix.get(suffix) || {};
+
+      if (section.id.includes('val-icon-')) current.icon = section.value;
+      if (section.id.includes('val-title-')) current.title = section.value;
+      if (section.id.includes('val-desc-')) current.desc = section.value;
+      valueBySuffix.set(suffix, current);
+    });
+
+    const getValIcon = (iconKey?: string) => {
+      const key = (iconKey || '').toLowerCase();
+      if (key.includes('users')) return <Users className="text-[#FF4D00]" />;
+      if (key.includes('leaf')) return <Leaf className="text-[#FF4D00]" />;
+      if (key.includes('zap')) return <Zap className="text-[#FF4D00]" />;
+      return <Shield className="text-[#FF4D00]" />;
+    };
+
+    Array.from(valueBySuffix.values()).forEach((item) => {
+      if (item.title && item.desc) {
+        dynamicValues.push({ icon: getValIcon(item.icon), title: item.title, desc: item.desc });
+      }
+    });
   }
 
   const stats = dynamicStats.length > 0 ? dynamicStats : [
@@ -36,8 +66,16 @@ const About: React.FC = () => {
     { label: getText('txt-g-ncl-r-label-123', 'GƏNCLƏR'), value: getGeneralText('STATS_YOUTH') || getText('txt-g-ncl-r-value-123', '20+') },
   ];
 
+  const values = dynamicValues.length > 0 ? dynamicValues : [
+    { icon: <Shield className="text-[#FF4D00]" />, title: getText('txt-val-safety-title-123', 'TƏHLÜKƏSİZLİK'), desc: getText('txt-val-safety-desc-123', 'EKSTREMAL İDMANDA CAN SAĞLIĞI BİZİM BİR NÖMRƏLİ QAYDAMIZDIR. BÜTÜN TEXNİKALARIMIZ FIA STANDARTLARINA UYĞUN YOXLANILIR.') },
+    { icon: <Users className="text-[#FF4D00]" />, title: getText('txt-val-community-title-123', 'İCMA RUHU'), desc: getText('txt-val-community-desc-123', 'FORSAJ BİR KLUBDAN DAHA ÇOX, SADİQ VƏ BÖYÜK BİR AİLƏDİR. BİRİMİZ HAMIMIZ, HAMIMIZ BİRİMİZ ÜÇÜN!') },
+    { icon: <Leaf className="text-[#FF4D00]" />, title: getText('txt-val-nature-title-123', 'TƏBİƏTİ QORU'), desc: getText('txt-val-nature-desc-123', 'BİZ OFFROAD EDƏRKƏN TƏBİƏTƏ ZƏRƏR VERMƏMƏYİ ÖZÜMÜZƏ BORC BİLİRİK. EKOLOJİ BALANS BİZİM ÜÇÜN MÜQƏDDƏSDİR.') },
+    { icon: <Zap className="text-[#FF4D00]" />, title: getText('txt-val-excellence-title-123', 'MÜKƏMMƏLLİK'), desc: getText('txt-val-excellence-desc-123', 'HƏR YARIŞDA, HƏR DÖNGƏDƏ DAHA YAXŞI OLMAĞA ÇALIŞIRIQ. TƏLİMLƏRİMİZ PEŞƏKAR İNSTRUKTORLAR TƏRƏFİNDƏN İDARƏ OLUNUR.') },
+  ];
+
   return (
-    <section id="haqqımızda" className="py-16 px-6 lg:px-20 relative overflow-hidden bg-[#0A0A0A] text-white">
+    <div id="haqqımızda" className="bg-[#0A0A0A] text-white">
+    <section className="py-16 px-6 lg:px-20 relative overflow-hidden bg-[#0A0A0A] text-white">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-20">
         <div className="flex items-start gap-4">
           <div className="w-2 h-16 bg-[#FF4D00] shadow-[0_0_15px_rgba(255,77,0,0.4)]"></div>
@@ -88,6 +126,72 @@ const About: React.FC = () => {
         </div>
       </div>
     </section>
+
+    <section className="bg-[#050505] py-24 px-6 lg:px-20 text-white relative border-y border-white/5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
+        <div className="relative">
+          <div className="w-10 h-1 bg-[#FF4D00] mb-8"></div>
+          <h3 className="text-5xl font-black italic mb-8 uppercase tracking-tighter">
+            {getText('txt-bi-zi-m-mi-ssi-yamiz-424', 'BİZİM MİSSİYAMIZ')}
+          </h3>
+          <p className="text-gray-400 font-bold italic text-sm leading-relaxed mb-12 max-w-lg uppercase tracking-wide">
+            {getText('txt-az-rbaycan-n-h-r-bir-45', 'Azərbaycanın hər bir guşəsində offroad idmanını təbliğ etmək, yerli pilotları beynəlxalq standartlara uyğun yetişdirmək və təbiəti qoruyaraq ekstremal adrenalin təcrübəsi bəxş etmək.')}
+          </p>
+          <div className="bg-[#FF4D00] p-5 inline-flex items-center gap-4 transform -skew-x-12 text-black shadow-[0_0_30px_rgba(255,77,0,0.2)]">
+            <div className="bg-black p-2 text-[#FF4D00] transform skew-x-12 rounded-full">
+              <Target size={20} />
+            </div>
+            <span className="font-black italic text-xs transform skew-x-12 uppercase">
+              {getText('txt-h-d-fi-mi-z-dakar-ral-50', 'HƏDƏFİMİZ: DAKAR RALLİ 2026')}
+            </span>
+          </div>
+        </div>
+
+        <div className="relative">
+          <div className="w-10 h-1 bg-white/20 mb-8"></div>
+          <h3 className="text-5xl font-black italic mb-8 uppercase tracking-tighter">
+            {getText('txt-bi-zi-m-baxi-imiz-944', 'BİZİM BAXIŞIMIZ')}
+          </h3>
+          <p className="text-gray-400 font-bold italic text-sm leading-relaxed mb-12 max-w-lg uppercase tracking-wide">
+            {getText('txt-regionun-n-b-y-k-mo-901', 'Regionun ən böyük motorsport hubuna çevrilmək, rəqəmsal və fiziki infrastrukturlarla pilotlarımızı dəstəkləmək və motorsportu hər kəs üçün əlçatan bir ehtirasa çevirmək.')}
+          </p>
+          <div className="bg-white/5 border border-white/10 p-5 inline-flex items-center gap-4 transform -skew-x-12">
+            <div className="bg-white/10 p-2 text-white transform skew-x-12 rounded-full border border-white/10">
+              <Globe size={20} />
+            </div>
+            <span className="font-black italic text-xs text-white transform skew-x-12 uppercase">
+              {getText('txt-qafqazin-li-der-klubu-758', 'QAFQAZIN LİDER KLUBUNA ÇEVRİLMƏK')}
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section className="py-24 px-6 lg:px-20 bg-[#0A0A0A]">
+      <div className="text-center mb-20">
+        <h4 className="text-[#FF4D00] font-black italic text-[10px] tracking-[0.4em] mb-4 uppercase">
+          {getText('txt-fundamental-pri-nsi-pl-219', 'FUNDAMENTAL PRİNSİPLƏR')}
+        </h4>
+        <h2 className="text-6xl font-black italic tracking-tighter uppercase leading-none text-white">
+          {getText('txt-sas-d-y-rl-ri-mi-z-482', 'ƏSAS DƏYƏRLƏRİMİZ')}
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        {values.map((v, i) => (
+          <div key={i} className="flex flex-col items-start gap-6 group cursor-default">
+            <div className="bg-white/5 border border-white/5 p-6 rounded-sm transform group-hover:scale-110 group-hover:bg-[#FF4D00]/10 transition-all">
+              {v.icon}
+            </div>
+            <h5 className="font-black italic text-2xl uppercase tracking-tighter text-white group-hover:text-[#FF4D00] transition-colors">{v.title}</h5>
+            <p className="text-gray-500 font-bold italic text-[10px] uppercase leading-relaxed tracking-widest">
+              {v.desc}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+    </div>
   );
 };
 

@@ -289,10 +289,83 @@ const VisualEditor: React.FC = () => {
                     'site', 'settings', 'general', 'app'
                 ];
                 const updatedContent = [...contentData];
-                const ensureAboutStats = (aboutPage: PageContent) => {
+                const ensureAboutDefaults = (aboutPage: PageContent) => {
                     const sections = aboutPage.sections || [];
+
+                    const ensureSection = (id: string, label: string, value: string) => {
+                        if (sections.some(s => s.id === id)) return;
+                        sections.push({ id, type: 'text', label, value });
+                    };
+
+                    // Ensure key "about" title fields always exist in panel
+                    ensureSection(
+                        'txt-est-2018-motorsp-949',
+                        'About Üst Başlıq',
+                        'EST. 2018 // MOTORSPORT MƏRKƏZİ'
+                    );
+                    ensureSection(
+                        'txt-forsaj-club-az-rba-66',
+                        'About Ana Başlıq',
+                        '"FORSAJ CLUB" AZƏRBAYCANIN OFFROAD MƏDƏNİYYƏTİNİ PEŞƏKAR SƏVİYYƏYƏ ÇATDIRMAQ ÜÇÜN YARADILMIŞDIR.'
+                    );
+                    ensureSection(
+                        'txt-bi-zi-m-mi-ssi-yamiz-424',
+                        'Missiya Başlığı',
+                        'BİZİM MİSSİYAMIZ'
+                    );
+                    ensureSection(
+                        'txt-az-rbaycan-n-h-r-bir-45',
+                        'Missiya Təsviri',
+                        'Azərbaycanın hər bir guşəsində offroad idmanını təbliğ etmək, yerli pilotları beynəlxalq standartlara uyğun yetişdirmək və təbiəti qoruyaraq ekstremal adrenalin təcrübəsi bəxş etmək.'
+                    );
+                    ensureSection(
+                        'txt-h-d-fi-mi-z-dakar-ral-50',
+                        'Missiya Hədəf Mətni',
+                        'HƏDƏFİMİZ: DAKAR RALLİ 2026'
+                    );
+                    ensureSection(
+                        'txt-bi-zi-m-baxi-imiz-944',
+                        'Vizyon Başlığı',
+                        'BİZİM BAXIŞIMIZ'
+                    );
+                    ensureSection(
+                        'txt-regionun-n-b-y-k-mo-901',
+                        'Vizyon Təsviri',
+                        'Regionun ən böyük motorsport hubuna çevrilmək, rəqəmsal və fiziki infrastrukturlarla pilotlarımızı dəstəkləmək və motorsportu hər kəs üçün əlçatan bir ehtirasa çevirmək.'
+                    );
+                    ensureSection(
+                        'txt-qafqazin-li-der-klubu-758',
+                        'Vizyon Şüarı',
+                        'QAFQAZIN LİDER KLUBUNA ÇEVRİLMƏK'
+                    );
+                    ensureSection(
+                        'txt-fundamental-pri-nsi-pl-219',
+                        'Dəyərlər Alt Başlıq',
+                        'FUNDAMENTAL PRİNSİPLƏR'
+                    );
+                    ensureSection(
+                        'txt-sas-d-y-rl-ri-mi-z-482',
+                        'Dəyərlər Başlığı',
+                        'ƏSAS DƏYƏRLƏRİMİZ'
+                    );
+                    ensureSection('val-icon-1', 'Dəyər 1 İkonu', 'Shield');
+                    ensureSection('val-title-1', 'Dəyər 1 Başlıq', 'TƏHLÜKƏSİZLİK');
+                    ensureSection('val-desc-1', 'Dəyər 1 Təsvir', 'EKSTREMAL İDMANDA CAN SAĞLIĞI BİZİM BİR NÖMRƏLİ QAYDAMIZDIR. BÜTÜN TEXNİKALARIMIZ FIA STANDARTLARINA UYĞUN YOXLANILIR.');
+                    ensureSection('val-icon-2', 'Dəyər 2 İkonu', 'Users');
+                    ensureSection('val-title-2', 'Dəyər 2 Başlıq', 'İCMA RUHU');
+                    ensureSection('val-desc-2', 'Dəyər 2 Təsvir', 'FORSAJ BİR KLUBDAN DAHA ÇOX, SADİQ VƏ BÖYÜK BİR AİLƏDİR. BİRİMİZ HAMIMIZ, HAMIMIZ BİRİMİZ ÜÇÜN!');
+                    ensureSection('val-icon-3', 'Dəyər 3 İkonu', 'Leaf');
+                    ensureSection('val-title-3', 'Dəyər 3 Başlıq', 'TƏBİƏTİ QORU');
+                    ensureSection('val-desc-3', 'Dəyər 3 Təsvir', 'BİZ OFFROAD EDƏRKƏN TƏBİƏTƏ ZƏRƏR VERMƏMƏYİ ÖZÜMÜZƏ BORC BİLİRİK. EKOLOJİ BALANS BİZİM ÜÇÜN MÜQƏDDƏSDİR.');
+                    ensureSection('val-icon-4', 'Dəyər 4 İkonu', 'Zap');
+                    ensureSection('val-title-4', 'Dəyər 4 Başlıq', 'MÜKƏMMƏLLİK');
+                    ensureSection('val-desc-4', 'Dəyər 4 Təsvir', 'HƏR YARIŞDA, HƏR DÖNGƏDƏ DAHA YAXŞI OLMAĞA ÇALIŞIRIQ. TƏLİMLƏRİMİZ PEŞƏKAR İNSTRUKTORLAR TƏRƏFİNDƏN İDARƏ OLUNUR.');
+
                     const hasStatPairs = sections.some(s => s.id.includes('label-stat')) && sections.some(s => s.id.includes('value-stat'));
-                    if (hasStatPairs) return;
+                    if (hasStatPairs) {
+                        aboutPage.sections = sections;
+                        return;
+                    }
 
                     const defaults = [
                         { label: 'PİLOTLAR', value: '140+' },
@@ -329,12 +402,12 @@ const VisualEditor: React.FC = () => {
                             images: []
                         });
                     } else if (id === 'about') {
-                        ensureAboutStats(found);
+                        ensureAboutDefaults(found);
                     }
                 });
 
                 const aboutPage = updatedContent.find(p => p.id === 'about');
-                if (aboutPage) ensureAboutStats(aboutPage);
+                if (aboutPage) ensureAboutDefaults(aboutPage);
                 setPages(updatedContent);
             }
 
