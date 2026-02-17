@@ -28,6 +28,8 @@ let siteContentInFlight: Promise<PageContent[]> | null = null;
 let siteContentCacheAt = 0;
 const CACHE_TTL_MS = 10000;
 const CONTENT_VERSION_KEY = 'forsaj_site_content_version';
+const SITE_LANG_KEY = 'forsaj_site_lang';
+type SiteLang = 'AZ' | 'RU' | 'ENG';
 
 const normalizeContent = (data: any): PageContent[] => {
     if (!Array.isArray(data)) return [];
@@ -38,6 +40,51 @@ const normalizeContent = (data: any): PageContent[] => {
         sections: Array.isArray(p?.sections) ? p.sections : [],
         images: Array.isArray(p?.images) ? p.images : []
     }));
+};
+
+const normalizeToken = (value: string) =>
+    (value || '')
+        .toLocaleLowerCase('az')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '');
+
+const isKeyLikeValue = (value?: string) => /^[A-Z0-9_]+$/.test((value || '').trim());
+
+const buildLanguageCandidates = (rawKey: string | number, lang: SiteLang) => {
+    const key = String(rawKey || '').trim();
+    if (!key) return [];
+    if (lang === 'AZ') return [key];
+    return [
+        `${key}_${lang}`,
+        `${lang}_${key}`,
+        `${key}.${lang.toLowerCase()}`,
+        key
+    ];
+};
+
+const findSectionByKey = (sections: ContentSection[], key: string | number, lang: SiteLang) => {
+    const candidates = buildLanguageCandidates(key, lang);
+    if (candidates.length === 0) return undefined;
+    const normalizedCandidates = candidates.map(normalizeToken);
+
+    return sections.find((section) => {
+        const sectionId = normalizeToken(section.id || '');
+        const sectionLabel = normalizeToken(section.label || '');
+        return normalizedCandidates.some((candidate) =>
+            sectionId === candidate ||
+            sectionLabel === candidate ||
+            sectionLabel === normalizeToken(`KEY: ${candidate}`)
+        );
+    });
+};
+
+const findSectionByFallback = (sections: ContentSection[], fallbackValue: string) => {
+    const target = normalizeToken(fallbackValue || '');
+    if (!target) return undefined;
+    return sections.find((section) =>
+        normalizeToken(section.value || '') === target || normalizeToken(section.label || '') === target
+    );
 };
 
 const fetchSiteContentOnce = async (): Promise<PageContent[]> => {
@@ -63,6 +110,11 @@ const fetchSiteContentOnce = async (): Promise<PageContent[]> => {
 export const useSiteContent = (scopePageId?: string) => {
     const [content, setContent] = useState<PageContent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [language, setLanguage] = useState<SiteLang>(() => {
+        const saved = localStorage.getItem(SITE_LANG_KEY) as SiteLang | null;
+        if (saved === 'AZ' || saved === 'RU' || saved === 'ENG') return saved;
+        return 'AZ';
+    });
 
     useEffect(() => {
         let isMounted = true;
@@ -85,8 +137,7 @@ export const useSiteContent = (scopePageId?: string) => {
 
         loadContent();
 
-        const onStorage = (event: StorageEvent) => {
-            if (event.key !== CONTENT_VERSION_KEY) return;
+        const refresh = () => {
             siteContentCache = null;
             siteContentCacheAt = 0;
             fetchSiteContentOnce()
@@ -94,10 +145,36 @@ export const useSiteContent = (scopePageId?: string) => {
                 .catch((err) => console.error('Failed to refresh site content from storage event:', err));
         };
 
+        const onStorage = (event: StorageEvent) => {
+            if (event.key === SITE_LANG_KEY) {
+                const next = (event.newValue || 'AZ') as SiteLang;
+                if (next === 'AZ' || next === 'RU' || next === 'ENG') {
+                    setLanguage(next);
+                }
+                return;
+            }
+            if (event.key !== CONTENT_VERSION_KEY) return;
+            refresh();
+        };
+
+        const onLangChange = () => {
+            const next = (localStorage.getItem(SITE_LANG_KEY) || 'AZ') as SiteLang;
+            if (next === 'AZ' || next === 'RU' || next === 'ENG') {
+                setLanguage(next);
+            }
+        };
+
+        const interval = window.setInterval(() => {
+            refresh();
+        }, 15000);
+
         window.addEventListener('storage', onStorage);
+        window.addEventListener('forsaj-language-changed', onLangChange as EventListener);
         return () => {
             isMounted = false;
+            window.clearInterval(interval);
             window.removeEventListener('storage', onStorage);
+            window.removeEventListener('forsaj-language-changed', onLangChange as EventListener);
         };
     }, []);
 
@@ -129,11 +206,19 @@ export const useSiteContent = (scopePageId?: string) => {
         if (!page) return defaultValue;
         const sections = Array.isArray(page.sections) ? page.sections : [];
 
-        const section = typeof sectionIdOrIndex === 'number'
+        let section = typeof sectionIdOrIndex === 'number'
             ? sections[sectionIdOrIndex]
-            : sections.find(s => s.id === sectionIdOrIndex);
+            : findSectionByKey(sections, sectionIdOrIndex, language);
 
-        return section ? section.value : defaultValue;
+        if (!section && typeof sectionIdOrIndex !== 'number' && defaultValue) {
+            section = findSectionByFallback(sections, defaultValue);
+        }
+
+        if (!section) return defaultValue;
+        const value = String(section.value || '');
+        const keyCandidates = buildLanguageCandidates(sectionIdOrIndex, language).map(v => v.toUpperCase());
+        if (isKeyLikeValue(value) && keyCandidates.includes(value.toUpperCase())) return defaultValue;
+        return value || defaultValue;
     };
 
     const getImage = (arg1: string, arg2?: string | number, arg3: string = '') => {
@@ -159,9 +244,11 @@ export const useSiteContent = (scopePageId?: string) => {
 
         const image = typeof imageIdOrIndex === 'number'
             ? images[imageIdOrIndex]
-            : images.find(img => img.id === imageIdOrIndex);
+            : images.find(img => normalizeToken(img.id || '') === normalizeToken(String(imageIdOrIndex)));
 
-        return image ? { path: image.path, alt: image.alt } : { path: defaultPath, alt: '' };
+        if (image) return { path: image.path, alt: image.alt };
+        if (images.length > 0) return { path: images[0].path || defaultPath, alt: images[0].alt || '' };
+        return { path: defaultPath, alt: '' };
     };
 
     const getUrl = (arg1: string, arg2?: string | number, arg3: string = '') => {
@@ -187,10 +274,17 @@ export const useSiteContent = (scopePageId?: string) => {
 
         const section = typeof sectionIdOrIndex === 'number'
             ? sections[sectionIdOrIndex]
-            : sections.find(s => s.id === sectionIdOrIndex);
+            : findSectionByKey(sections, sectionIdOrIndex, language);
 
         return section?.url || defaultUrl;
     };
 
-    return { content, isLoading, getPage, getText, getImage, getUrl };
+    const setSiteLanguage = (next: SiteLang) => {
+        const lang = next === 'AZ' || next === 'RU' || next === 'ENG' ? next : 'AZ';
+        localStorage.setItem(SITE_LANG_KEY, lang);
+        setLanguage(lang);
+        window.dispatchEvent(new CustomEvent('forsaj-language-changed'));
+    };
+
+    return { content, isLoading, getPage, getText, getImage, getUrl, language, setSiteLanguage };
 };

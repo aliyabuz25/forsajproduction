@@ -8,15 +8,13 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
-  const { getPage, getImage } = useSiteContent('navbar');
+  const { getPage, language, setSiteLanguage } = useSiteContent('navbar');
   const { getImage: getImageGeneral } = useSiteContent('general');
-  const [currentLang, setCurrentLang] = useState('AZ');
   const [isLangOpen, setIsLangOpen] = useState(false);
 
   const navbarPage = getPage('navbar');
   const logoImg = getImageGeneral('SITE_LOGO_LIGHT').path;
 
-  // Default items as fallback
   const defaultNavItems = [
     { name: 'ANA SƏHİFƏ', id: 'home' },
     { name: 'HAQQIMIZDA', id: 'about' },
@@ -28,17 +26,22 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
     { name: 'ƏLAQƏ', id: 'contact' },
   ];
 
-  const navItems = [
-    { name: 'ANA SƏHİFƏ', id: 'home' },
-    { name: 'HAQQIMIZDA', id: 'about' },
-    { name: 'XƏBƏRLƏR', id: 'news' },
-    { name: 'TƏDBİRLƏR', id: 'events' },
-    { name: 'SÜRÜCÜLƏR', id: 'drivers' },
-    { name: 'QALEREYA', id: 'gallery' },
-    { name: 'QAYDALAR', id: 'rules' },
-    { name: 'ƏLAQƏ', id: 'contact' },
-  ];
+  const navItems = (navbarPage?.sections || [])
+    .filter((s) => {
+      const label = (s.label || '').toUpperCase();
+      const value = (s.value || '').toUpperCase();
+      const url = (s.url || '').trim();
+      if (!url) return false;
+      if (label.includes('SITE_LOGO') || label.includes('ALT:')) return false;
+      if (value.includes('SITE_LOGO') || value.includes('FORSAJ LOGO')) return false;
+      return true;
+    })
+    .map((s) => ({
+      name: s.value || s.label,
+      id: (s.url || '').trim()
+    }));
 
+  const resolvedNavItems = navItems.length > 0 ? navItems : defaultNavItems;
 
   const languages = ['AZ', 'RU', 'ENG'];
 
@@ -67,7 +70,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
       </div>
 
       <div className="hidden lg:flex items-center gap-2 xl:gap-4">
-        {navItems.map((item) => (
+        {resolvedNavItems.map((item) => (
           <button
             key={item.id}
             onClick={() => {
@@ -93,7 +96,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
           className="flex items-center gap-2 group cursor-pointer bg-white/5 px-4 py-2 rounded-sm border border-white/10 hover:border-[#FF4D00]/50 transition-all"
         >
           <Globe className="w-4 h-4 text-gray-500 group-hover:text-[#FF4D00]" />
-          <span className="text-[11px] font-black italic text-white">{currentLang}</span>
+          <span className="text-[11px] font-black italic text-white">{language}</span>
           <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
         </button>
 
@@ -103,10 +106,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
               <button
                 key={lang}
                 onClick={() => {
-                  setCurrentLang(lang);
+                  setSiteLanguage(lang as any);
                   setIsLangOpen(false);
                 }}
-                className={`w-full text-left px-5 py-3 text-[10px] font-black italic hover:bg-[#FF4D00] hover:text-black transition-all ${currentLang === lang ? 'text-[#FF4D00]' : 'text-gray-500'
+                className={`w-full text-left px-5 py-3 text-[10px] font-black italic hover:bg-[#FF4D00] hover:text-black transition-all ${language === lang ? 'text-[#FF4D00]' : 'text-gray-500'
                   }`}
               >
                 {lang}

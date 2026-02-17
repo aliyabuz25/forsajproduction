@@ -15,7 +15,7 @@ interface RuleSection {
 
 const RulesPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string>('pilot');
-  const { getText } = useSiteContent('rulespage');
+  const { getText, getUrl } = useSiteContent('rulespage');
 
   const ruleSections: RuleSection[] = [
     {
@@ -148,7 +148,13 @@ const RulesPage: React.FC = () => {
                 <p className="text-white font-black italic text-[11px] uppercase tracking-tighter">{activeSection.toUpperCase()}_PROTOKOLU.PDF</p>
               </div>
             </div>
-            <button className="w-full bg-[#FF4D00] text-black py-4 font-black italic text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-white transition-all transform -skew-x-12">
+            <button
+              className="w-full bg-[#FF4D00] text-black py-4 font-black italic text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-white transition-all transform -skew-x-12"
+              onClick={() => {
+                const url = getUrl('BTN_DOWNLOAD_PDF', '');
+                if (url) window.open(url, '_blank');
+              }}
+            >
               <span className="transform skew-x-12 flex items-center gap-2">{getText('BTN_DOWNLOAD_PDF', 'PDF YÜKLƏ')} <Download size={14} /></span>
             </button>
           </div>

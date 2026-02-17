@@ -13,9 +13,25 @@ const GalleryPage: React.FC = () => {
 
   const extractYoutubeId = (url: string) => {
     if (!url) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname.includes('youtu.be')) {
+        const id = parsed.pathname.replace('/', '').trim();
+        return id.length === 11 ? id : null;
+      }
+      if (parsed.hostname.includes('youtube.com')) {
+        const byQuery = parsed.searchParams.get('v');
+        if (byQuery && byQuery.length === 11) return byQuery;
+        const parts = parsed.pathname.split('/').filter(Boolean);
+        const candidate = parts[1] || parts[0];
+        return candidate && candidate.length === 11 ? candidate : null;
+      }
+    } catch {
+      // fallback regex for malformed URL strings
+    }
+    const regExp = /(?:youtu\.be\/|youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/;
     const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+    return match ? match[1] : null;
   };
 
   useEffect(() => {

@@ -3,8 +3,9 @@ import { Activity } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
 
 const Marquee: React.FC = () => {
-  const { getPage } = useSiteContent();
+  const { getPage, getImage } = useSiteContent('marquee');
   const marqueePage = getPage('marquee');
+  const marqueeImage = getImage('marquee-image', '');
 
   if (!marqueePage || marqueePage.active === false) return null;
 
@@ -22,6 +23,13 @@ const Marquee: React.FC = () => {
 
   return (
     <div className="bg-[#FF4D00] py-3 overflow-hidden whitespace-nowrap relative border-b border-[#CC3D00] flex items-center">
+      {marqueeImage.path && (
+        <img
+          src={marqueeImage.path}
+          alt={marqueeImage.alt || 'Marquee'}
+          className="absolute inset-0 w-full h-full object-cover opacity-15"
+        />
+      )}
       <div className="inline-block animate-marquee">
         {new Array(10).fill(null).map((_, i) => (
           <MarqueeItem key={i} />

@@ -14,6 +14,8 @@ interface EventItem {
   description?: string;
   rules?: string;
   pdfUrl?: string;
+  pdf_url?: string;
+  pdfURL?: string;
   status: 'planned' | 'past';
 }
 
@@ -300,7 +302,10 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
                     <p className="text-gray-500 font-bold italic text-sm uppercase tracking-widest max-w-sm">{getText('DOWNLOAD_DESC', 'YARIŞA HAZIRLIQ VƏ TEXNİKİ REQLAMENT HAQQINDA BÜTÜN MƏLUMATLAR BU SƏNƏDDƏ QEYD OLUNUB.')}</p>
                   </div>
                   <button
-                    onClick={() => selectedEvent.pdfUrl && window.open(selectedEvent.pdfUrl, '_blank')}
+                    onClick={() => {
+                      const pdfLink = selectedEvent.pdfUrl || selectedEvent.pdf_url || selectedEvent.pdfURL || '';
+                      if (pdfLink) window.open(pdfLink, '_blank');
+                    }}
                     className="bg-[#FF4D00] text-black px-12 py-6 font-black italic text-xl uppercase transform -skew-x-12 hover:bg-white transition-all flex items-center gap-4 shadow-[0_15px_40px_rgba(255,77,0,0.3)] group-hover/dl:scale-105 active:scale-95"
                   >
                     <span className="transform skew-x-12 flex items-center gap-3 whitespace-nowrap">{getText('BTN_DOWNLOAD_PDF', 'PDF YÜKLƏ')} <Download size={24} className="animate-bounce" /></span>

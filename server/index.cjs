@@ -749,7 +749,7 @@ app.post('/api/applications', async (req, res) => {
         return res.status(400).json({ error: 'Sahə uzunluğu limiti aşıldı' });
     }
 
-    if (type.toLowerCase().includes('pilot')) {
+    if (type.toLowerCase().includes('pilot') && content.trim().startsWith('{')) {
         try {
             const payload = JSON.parse(content);
             const requiredPilotFields = ['event', 'car', 'tire', 'engine', 'club'];
@@ -794,6 +794,18 @@ app.post('/api/applications/:id/read', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error marking application as read:', error);
         res.status(500).json({ error: 'Xəta baş verdi' });
+    }
+});
+
+// API: Delete Application (Auth)
+app.delete('/api/applications/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query('DELETE FROM applications WHERE id = ?', [id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting application:', error);
+        res.status(500).json({ error: 'Müraciəti silmək mümkün olmadı' });
     }
 });
 
