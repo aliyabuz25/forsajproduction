@@ -266,6 +266,9 @@ const isSectionVisibleInAdmin = (_section: Section) => {
 
 const shouldSkipSectionInEditor = (section: Section) => {
     const key = extractSectionKey(section);
+    // User requested: hide all underscore-style technical keys in editor.
+    if ((section.id || '').includes('_')) return true;
+    if (key && key.includes('_')) return true;
     // Keep human-facing key fields editable, but hide raw token placeholders.
     if (key && key.includes('_') && looksLikeKeyToken(normalizePlainText(section.value || ''))) return true;
     if (!key && looksLikeKeyToken(section.value)) return true;
