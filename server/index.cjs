@@ -377,7 +377,16 @@ app.get('/', (req, res) => {
     res.send('Forsaj Backend API is running. Use /api/health for details.');
 });
 
-app.use('/uploads', express.static(UPLOAD_DIR_PATH));
+// Serve uploads from primary and legacy locations to avoid 404 on migrated data.
+const UPLOAD_STATIC_DIRS = Array.from(new Set([
+    UPLOAD_DIR_PATH,
+    path.join(WEB_DATA_DIR, 'uploads'),
+    path.join(__dirname, '../front/public/uploads')
+]));
+
+UPLOAD_STATIC_DIRS.forEach((dirPath) => {
+    app.use('/uploads', express.static(dirPath));
+});
 
 // API: Get Gallery Photos
 app.get('/api/gallery-photos', async (req, res) => {

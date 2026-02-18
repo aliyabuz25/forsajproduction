@@ -1638,6 +1638,25 @@ const VisualEditor: React.FC = () => {
         return uploadAsset(file);
     };
 
+    const uploadPdf = async (file: File): Promise<string | null> => {
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            toast.error('Yalnız PDF faylı yüklənə bilər');
+            return null;
+        }
+        return uploadAsset(file, {
+            loadingText: 'PDF yüklənir...',
+            successText: 'PDF uğurla yükləndi',
+            errorText: 'PDF yüklənərkən xəta baş verdi'
+        });
+    };
+
+    const handleRulesTabPdfUpload = async (file: File, rowIdx: number, pageIdx: number = selectedPageIndex) => {
+        const url = await uploadPdf(file);
+        if (!url) return;
+        updateRulesTabField(rowIdx, 'docName', file.name, pageIdx);
+        updateRulesTabField(rowIdx, 'docUrl', url, pageIdx);
+    };
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, pageIdx: number, imgId: string) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -3287,6 +3306,25 @@ const VisualEditor: React.FC = () => {
                                                                                 placeholder="Sənəd linki (Məs: /uploads/pilot.pdf və ya https://...)"
                                                                                 style={{ width: '100%', padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
                                                                             />
+                                                                            <input
+                                                                                id={`rules-doc-upload-${pageIdx}-${rowIndex}`}
+                                                                                type="file"
+                                                                                accept=".pdf,application/pdf"
+                                                                                style={{ display: 'none' }}
+                                                                                onChange={async (e) => {
+                                                                                    const f = e.target.files?.[0];
+                                                                                    if (!f) return;
+                                                                                    await handleRulesTabPdfUpload(f, rowIndex, pageIdx);
+                                                                                    e.target.value = '';
+                                                                                }}
+                                                                            />
+                                                                            <button
+                                                                                type="button"
+                                                                                className="btn-secondary"
+                                                                                onClick={() => document.getElementById(`rules-doc-upload-${pageIdx}-${rowIndex}`)?.click()}
+                                                                            >
+                                                                                PDF Yüklə
+                                                                            </button>
                                                                         </div>
                                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                                             {(row.items || []).map((item, itemIndex) => (
@@ -3797,6 +3835,25 @@ const VisualEditor: React.FC = () => {
                                                                     placeholder="Sənəd linki (Məs: /uploads/pilot.pdf və ya https://...)"
                                                                     style={{ width: '100%', padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
                                                                 />
+                                                                <input
+                                                                    id={`rules-doc-upload-current-${rowIndex}`}
+                                                                    type="file"
+                                                                    accept=".pdf,application/pdf"
+                                                                    style={{ display: 'none' }}
+                                                                    onChange={async (e) => {
+                                                                        const f = e.target.files?.[0];
+                                                                        if (!f) return;
+                                                                        await handleRulesTabPdfUpload(f, rowIndex);
+                                                                        e.target.value = '';
+                                                                    }}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn-secondary"
+                                                                    onClick={() => document.getElementById(`rules-doc-upload-current-${rowIndex}`)?.click()}
+                                                                >
+                                                                    PDF Yüklə
+                                                                </button>
                                                             </div>
 
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
