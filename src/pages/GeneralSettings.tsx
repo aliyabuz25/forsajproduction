@@ -10,6 +10,17 @@ const PAGE_DEFAULT_TITLES: Record<string, string> = {
     marquee: 'MARQUEE'
 };
 const SOCIAL_FIELD_IDS = ['SOCIAL_INSTAGRAM', 'SOCIAL_YOUTUBE', 'SOCIAL_FACEBOOK'] as const;
+const SETTINGS_NAV_ITEMS = [
+    { id: 'seo-basic', label: 'SEO əsas' },
+    { id: 'seo-social', label: 'OG / Twitter' },
+    { id: 'seo-verify', label: 'Təsdiq kodları' },
+    { id: 'contact-details', label: 'Əlaqə' },
+    { id: 'departments', label: 'Şöbə e-poçtları' },
+    { id: 'branding', label: 'Brendinq' },
+    { id: 'social-links', label: 'Sosial linklər' },
+    { id: 'marquee-settings', label: 'Marquee' },
+    { id: 'stats', label: 'Statistika' }
+] as const;
 
 const normalizeExternalUrl = (rawValue: string) => {
     const value = (rawValue || '').trim();
@@ -70,11 +81,13 @@ const GeneralSettings: React.FC = () => {
     const loadSettings = async () => {
         try {
             const res = await fetch('/api/site-content');
+            if (!res.ok) throw new Error('site-content fetch failed');
             const data = await res.json();
-            setPages(data);
-            setIsLoading(false);
+            setPages(Array.isArray(data) ? data : []);
         } catch (err) {
             toast.error('Ayarlar yüklənərkən xəta baş verdi');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -95,7 +108,7 @@ const GeneralSettings: React.FC = () => {
             seo: 'seo-basic',
             general: 'branding',
             contact: 'contact-details',
-            social: 'branding',
+            social: 'social-links',
             stats: 'stats',
             marquee: 'marquee-settings',
         };
@@ -147,10 +160,12 @@ const GeneralSettings: React.FC = () => {
     const getFieldValue = (id: string, isImage: boolean = false, pageId: string = 'general') => {
         const page = pages.find((p) => p.id === pageId);
         if (!page) return '';
+        const sections = Array.isArray(page.sections) ? page.sections : [];
+        const images = Array.isArray(page.images) ? page.images : [];
         if (isImage) {
-            return page.images.find((img: any) => img.id === id)?.path || '';
+            return images.find((img: any) => img.id === id)?.path || '';
         }
-        return page.sections.find((sec: any) => sec.id === id)?.value || '';
+        return sections.find((sec: any) => sec.id === id)?.value || '';
     };
 
     const getPageActive = (pageId: string, fallback: boolean = true) => {
@@ -249,11 +264,10 @@ const GeneralSettings: React.FC = () => {
 
         try {
             const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
-            if (res.ok) {
-                const data = await res.json();
-                updateField(id, data.url, true, pageId);
-                toast.success('Şəkil yükləndi', { id: toastId });
-            }
+            if (!res.ok) throw new Error('image upload failed');
+            const data = await res.json();
+            updateField(id, data.url, true, pageId);
+            toast.success('Şəkil yükləndi', { id: toastId });
         } catch (err) {
             toast.error('Yükləmə xətası', { id: toastId });
         }
@@ -265,17 +279,24 @@ const GeneralSettings: React.FC = () => {
         const payload = sanitizeSocialLinks(pages);
         setPages(payload);
         try {
-            await fetch('/api/save-content', {
+            const res = await fetch('/api/save-content', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+            if (!res.ok) throw new Error('save-content failed');
             toast.success('Ayarlar qeyd edildi!', { id: toastId });
         } catch (err) {
             toast.error('Xəta baş verdi', { id: toastId });
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const scrollToSection = (sectionId: string) => {
+        const target = document.querySelector(`[data-settings-section="${sectionId}"]`);
+        if (!target) return;
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     if (isLoading) return <div className="loading-state">Yüklənir...</div>;
@@ -299,12 +320,32 @@ const GeneralSettings: React.FC = () => {
                 </div>
             )}
 
+            {!isHiddenTab && (
+                <div className="settings-quick-nav">
+                    {SETTINGS_NAV_ITEMS.map((item) => (
+                        <button
+                            key={item.id}
+                            type="button"
+                            className="quick-nav-btn"
+                            onClick={() => scrollToSection(item.id)}
+                        >
+                            {item.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             <div className="settings-grid">
                 {/* SEO Section */}
                 <div className={getCardClassName('seo-basic')} data-settings-section="seo-basic">
                     <div className="card-header">
-                        <Globe size={20} className="text-blue-500" />
-                        <h2>SEO və axtarış motoru</h2>
+                        <div className="card-title-wrap">
+                            <div className="card-title-row">
+                                <Globe size={20} className="text-blue-500" />
+                                <h2>SEO və axtarış motoru</h2>
+                            </div>
+                            <p className="card-description">Axtarış nəticələrində görünən əsas meta məlumatlar.</p>
+                        </div>
                         {renderCardAction('seo-basic')}
                     </div>
                     <div className="card-body">
@@ -324,6 +365,7 @@ const GeneralSettings: React.FC = () => {
                                 onChange={(e) => updateField('SEO_DESCRIPTION', e.target.value)}
                                 placeholder="Sayt haqqında qısa məlumat..."
                             />
+                            <small className="field-help">Tövsiyə: 140-160 simvol arası qısa təsvir.</small>
                         </div>
                         <div className="field-group">
                             <label>Açar sözlər</label>
@@ -333,6 +375,7 @@ const GeneralSettings: React.FC = () => {
                                 onChange={(e) => updateField('SEO_KEYWORDS', e.target.value)}
                                 placeholder="offroad, baki, yarış, mitsubishi, pajero"
                             />
+                            <small className="field-help">Açar sözləri vergül ilə ayırın.</small>
                         </div>
                         <div className="field-group">
                             <label>Kanonik URL</label>
@@ -343,7 +386,7 @@ const GeneralSettings: React.FC = () => {
                                 placeholder="https://forsaj.az"
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="form-grid two-cols">
                             <div className="field-group">
                                 <label>Robots direktivi</label>
                                 <input
@@ -371,6 +414,7 @@ const GeneralSettings: React.FC = () => {
                                 onChange={(e) => updateField('SEO_LANGUAGE', e.target.value)}
                                 placeholder="az"
                             />
+                            <small className="field-help">Məs: `az`, `en`, `tr`.</small>
                         </div>
                     </div>
                 </div>
@@ -378,8 +422,13 @@ const GeneralSettings: React.FC = () => {
                 {/* Open Graph / Twitter SEO */}
                 <div className={getCardClassName('seo-social')} data-settings-section="seo-social">
                     <div className="card-header">
-                        <Globe size={20} className="text-cyan-500" />
-                        <h2>Sosial paylaşım SEO (OG / Twitter)</h2>
+                        <div className="card-title-wrap">
+                            <div className="card-title-row">
+                                <Globe size={20} className="text-cyan-500" />
+                                <h2>Sosial paylaşım SEO (OG / Twitter)</h2>
+                            </div>
+                            <p className="card-description">Link paylaşılarkən görünən başlıq, təsvir və şəkil.</p>
+                        </div>
                         {renderCardAction('seo-social')}
                     </div>
                     <div className="card-body">
@@ -400,7 +449,7 @@ const GeneralSettings: React.FC = () => {
                                 placeholder="Sosial şəbəkə paylaşım təsviri"
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="form-grid two-cols">
                             <div className="field-group">
                                 <label>OG URL</label>
                                 <input
@@ -420,7 +469,7 @@ const GeneralSettings: React.FC = () => {
                                 />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="form-grid two-cols">
                             <div className="field-group">
                                 <label>Twitter hesabı (site)</label>
                                 <input
@@ -449,7 +498,7 @@ const GeneralSettings: React.FC = () => {
                                     <div className="no-logo">OG şəkli yoxdur</div>
                                 )}
                             </div>
-                            <div className="grid grid-cols-2 gap-4" style={{ marginTop: '10px' }}>
+                            <div className="form-grid two-cols" style={{ marginTop: '10px' }}>
                                 <label className="upload-btn">
                                     <Upload size={14} /> Şəkil yüklə
                                     <input type="file" hidden onChange={(e) => handleFileUpload(e, 'SEO_OG_IMAGE')} />
@@ -468,8 +517,13 @@ const GeneralSettings: React.FC = () => {
                 {/* Verification Section */}
                 <div className={getCardClassName('seo-verify')} data-settings-section="seo-verify">
                     <div className="card-header">
-                        <BarChart3 size={20} className="text-violet-500" />
-                        <h2>Axtarış motoru təsdiqləri</h2>
+                        <div className="card-title-wrap">
+                            <div className="card-title-row">
+                                <BarChart3 size={20} className="text-violet-500" />
+                                <h2>Axtarış motoru təsdiqləri</h2>
+                            </div>
+                            <p className="card-description">Google, Bing və Yandex üçün doğrulama kodları.</p>
+                        </div>
                         {renderCardAction('seo-verify')}
                     </div>
                     <div className="card-body">
@@ -506,8 +560,13 @@ const GeneralSettings: React.FC = () => {
                 {/* Contact Details Section */}
                 <div className={getCardClassName('contact-details')} data-settings-section="contact-details">
                     <div className="card-header">
-                        <ImageIcon size={20} className="text-red-500" />
-                        <h2>Əlaqə & Ünvan Məlumatları</h2>
+                        <div className="card-title-wrap">
+                            <div className="card-title-row">
+                                <ImageIcon size={20} className="text-red-500" />
+                                <h2>Əlaqə & Ünvan Məlumatları</h2>
+                            </div>
+                            <p className="card-description">Footer və əlaqə hissəsində görünən ofis və əlaqə məlumatları.</p>
+                        </div>
                         {renderCardAction('contact-details')}
                     </div>
                     <div className="card-body">
@@ -538,7 +597,7 @@ const GeneralSettings: React.FC = () => {
                                 placeholder="Məs: 09:00 - 18:00"
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="form-grid two-cols">
                             <div className="field-group">
                                 <label>Əlaqə Nömrəsi</label>
                                 <input
@@ -564,8 +623,13 @@ const GeneralSettings: React.FC = () => {
                 {/* Department Emails Section */}
                 <div className={getCardClassName('departments')} data-settings-section="departments">
                     <div className="card-header">
-                        <Mail size={20} className="text-purple-500" />
-                        <h2>Şöbə E-poçtları</h2>
+                        <div className="card-title-wrap">
+                            <div className="card-title-row">
+                                <Mail size={20} className="text-purple-500" />
+                                <h2>Şöbə E-poçtları</h2>
+                            </div>
+                            <p className="card-description">Müraciətlərin istiqamətinə uyğun e-poçt ünvanları.</p>
+                        </div>
                         {renderCardAction('departments')}
                     </div>
                     <div className="card-body">
@@ -602,8 +666,13 @@ const GeneralSettings: React.FC = () => {
                 {/* Branding Section */}
                 <div className={getCardClassName('branding')} data-settings-section="branding">
                     <div className="card-header">
-                        <ImageIcon size={20} className="text-orange-500" />
-                        <h2>Brendinq & Loqo</h2>
+                        <div className="card-title-wrap">
+                            <div className="card-title-row">
+                                <ImageIcon size={20} className="text-orange-500" />
+                                <h2>Brendinq & Loqo</h2>
+                            </div>
+                            <p className="card-description">Light/Dark loqoları yükləyin, görünüşü dərhal önizləyin.</p>
+                        </div>
                         {renderCardAction('branding')}
                     </div>
                     <div className="card-body">
@@ -643,8 +712,13 @@ const GeneralSettings: React.FC = () => {
                 {/* Social Links Section */}
                 <div className={getCardClassName('social-links')} data-settings-section="social-links">
                     <div className="card-header">
-                        <Globe size={20} className="text-pink-500" />
-                        <h2>Sosial Media Linkləri</h2>
+                        <div className="card-title-wrap">
+                            <div className="card-title-row">
+                                <Globe size={20} className="text-pink-500" />
+                                <h2>Sosial Media Linkləri</h2>
+                            </div>
+                            <p className="card-description">Sosial hesabları daxil edin və “Test et” ilə yoxlayın.</p>
+                        </div>
                         {renderCardAction('social-links')}
                     </div>
                     <div className="card-body">
@@ -723,8 +797,13 @@ const GeneralSettings: React.FC = () => {
                 {/* Marquee Section */}
                 <div className={getCardClassName('marquee-settings')} data-settings-section="marquee-settings">
                     <div className="card-header">
-                        <Activity size={20} className="text-amber-500" />
-                        <h2>Marquee Ayarları</h2>
+                        <div className="card-title-wrap">
+                            <div className="card-title-row">
+                                <Activity size={20} className="text-amber-500" />
+                                <h2>Marquee Ayarları</h2>
+                            </div>
+                            <p className="card-description">Ana səhifənin üst hissəsindəki hərəkətli elan xəttini idarə edin.</p>
+                        </div>
                         {renderCardAction('marquee-settings')}
                     </div>
                     <div className="card-body">
@@ -774,7 +853,7 @@ const GeneralSettings: React.FC = () => {
                                     <div className="no-logo">Arxa plan şəkli yoxdur</div>
                                 )}
                             </div>
-                            <div className="grid grid-cols-2 gap-4" style={{ marginTop: '10px' }}>
+                            <div className="form-grid two-cols" style={{ marginTop: '10px' }}>
                                 <label className="upload-btn">
                                     <Upload size={14} /> Şəkil yüklə
                                     <input type="file" hidden onChange={(e) => handleFileUpload(e, 'marquee-image', 'marquee')} />
@@ -793,8 +872,13 @@ const GeneralSettings: React.FC = () => {
                 {/* Stats Section */}
                 <div className={getCardClassName('stats')} data-settings-section="stats">
                     <div className="card-header">
-                        <BarChart3 size={20} className="text-green-500" />
-                        <h2>Sayt Statistikaları</h2>
+                        <div className="card-title-wrap">
+                            <div className="card-title-row">
+                                <BarChart3 size={20} className="text-green-500" />
+                                <h2>Sayt Statistikaları</h2>
+                            </div>
+                            <p className="card-description">Ana səhifədə göstərilən qısa statistik göstəricilər.</p>
+                        </div>
                         {renderCardAction('stats')}
                     </div>
                     <div className="card-body">

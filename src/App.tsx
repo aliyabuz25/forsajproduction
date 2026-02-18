@@ -22,7 +22,8 @@ const normalizeText = (value: string) =>
 
 const titleMap: Record<string, string> = {
   DASHBOARD: 'Panel Ana Səhifə',
-  'ANA SƏHİFƏ': 'Sayt Məzmunu',
+  'ANA SƏHİFƏ': 'Ana Səhifə / Naviqasiya / Footer',
+  'SAYT MƏZMUNU': 'Ana Səhifə / Naviqasiya / Footer',
   'HAQQIMIZDA': 'Haqqımızda',
   'XƏBƏRLƏR': 'Xəbərlər',
   'TƏDBİRLƏR': 'Tədbirlər',
