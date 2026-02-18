@@ -636,6 +636,11 @@ const VisualEditor: React.FC = () => {
                     const hasStatPairs = sections.some(s => s.id.includes('label-stat')) && sections.some(s => s.id.includes('value-stat'));
                     if (hasStatPairs) {
                         aboutPage.sections = sections;
+                        prioritizeSectionOrder(aboutPage, [
+                            'PAGE_TITLE',
+                            'PAGE_SUBTITLE',
+                            'txt-est-2018-motorsp-949'
+                        ]);
                         ensureImage(
                             'img-992',
                             'https://images.unsplash.com/photo-1541447271487-09612b3f49f7?q=80&w=1974&auto=format&fit=crop',
@@ -668,6 +673,11 @@ const VisualEditor: React.FC = () => {
                     });
 
                     aboutPage.sections = sections;
+                    prioritizeSectionOrder(aboutPage, [
+                        'PAGE_TITLE',
+                        'PAGE_SUBTITLE',
+                        'txt-est-2018-motorsp-949'
+                    ]);
                     ensureImage(
                         'img-992',
                         'https://images.unsplash.com/photo-1541447271487-09612b3f49f7?q=80&w=1974&auto=format&fit=crop',
@@ -746,6 +756,21 @@ const VisualEditor: React.FC = () => {
                     });
                     page.sections = sections;
                 };
+                const prioritizeSectionOrder = (page: PageContent, priorityIds: string[]) => {
+                    const sections = page.sections || [];
+                    if (sections.length === 0 || priorityIds.length === 0) return;
+
+                    const rank = new Map(priorityIds.map((id, idx) => [id, idx]));
+                    const prioritized = sections
+                        .filter((section) => rank.has(section.id))
+                        .sort((a, b) => (rank.get(a.id) as number) - (rank.get(b.id) as number));
+                    const rest = sections.filter((section) => !rank.has(section.id));
+
+                    page.sections = [...prioritized, ...rest].map((section, idx) => ({
+                        ...section,
+                        order: idx
+                    }));
+                };
                 const ensureContactDefaults = (page: PageContent) => {
                     ensurePageSectionDefaults(page, [
                         { id: 'PAGE_TITLE', label: 'Səhifə Başlığı', value: 'ƏLAQƏ' },
@@ -815,6 +840,7 @@ const VisualEditor: React.FC = () => {
                         { id: 'PAGE_TITLE', label: 'Səhifə Başlığı', value: 'XƏBƏRLƏR' },
                         { id: 'PAGE_SUBTITLE', label: 'Səhifə Alt Başlığı', value: 'MOTORSPORT MAGAZINE // SEASON 2024' }
                     ]);
+                    prioritizeSectionOrder(page, ['PAGE_TITLE', 'PAGE_SUBTITLE']);
                 };
                 const ensureGalleryPageDefaults = (page: PageContent) => {
                     ensurePageSectionDefaults(page, [
