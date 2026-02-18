@@ -56,6 +56,15 @@ const normalizeContent = (data: any): PageContent[] => {
     }));
 };
 
+const extractSiteContentResource = (payload: any) => {
+    if (Array.isArray(payload)) return payload;
+    if (payload && typeof payload === 'object') {
+        const resource = payload?.resources?.['site-content'];
+        if (Array.isArray(resource)) return resource;
+    }
+    return [];
+};
+
 const normalizeToken = (value: string) =>
     (value || '')
         .toLocaleLowerCase('az')
@@ -206,9 +215,29 @@ const fetchSiteContentOnce = async (): Promise<PageContent[]> => {
 
     siteContentInFlight = (async () => {
         const version = localStorage.getItem(CONTENT_VERSION_KEY) || '';
-        const response = await fetch(`/api/site-content?v=${encodeURIComponent(version)}`);
-        if (!response.ok) throw new Error('Failed to fetch site content');
-        const data = await response.json();
+        let data: any[] = [];
+        let loadedFromStruct = false;
+
+        try {
+            const structResponse = await fetch(`/api/site-new-struct?v=${encodeURIComponent(version)}`);
+            if (structResponse.ok) {
+                const struct = await structResponse.json();
+                const fromStruct = extractSiteContentResource(struct);
+                if (Array.isArray(fromStruct)) {
+                    data = fromStruct;
+                    loadedFromStruct = true;
+                }
+            }
+        } catch {
+            // fallback handled below
+        }
+
+        if (!loadedFromStruct) {
+            const response = await fetch(`/api/site-content?v=${encodeURIComponent(version)}`);
+            if (!response.ok) throw new Error('Failed to fetch site content');
+            data = await response.json();
+        }
+
         const normalized = normalizeContent(data);
         siteContentCache = normalized;
         siteContentCacheAt = Date.now();

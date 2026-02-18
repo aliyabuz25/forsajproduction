@@ -147,6 +147,9 @@ const NEWS_FILE_PATH = path.join(FRONT_PUBLIC_DIR, 'news.json');
 const GALLERY_PHOTOS_FILE_PATH = path.join(FRONT_PUBLIC_DIR, 'gallery-photos.json');
 const VIDEOS_FILE_PATH = path.join(FRONT_PUBLIC_DIR, 'videos.json');
 const DRIVERS_FILE_PATH = path.join(FRONT_PUBLIC_DIR, 'drivers.json');
+const SITE_NEW_STRUCT_PATH = path.join(WEB_DATA_DIR, 'site-new-struct.json');
+const SITE_NEW_STRUCT_ID = 'site-new-struct';
+const SITE_NEW_STRUCT_RESOURCE_IDS = ['site-content', 'events', 'news', 'gallery-photos', 'videos', 'drivers'];
 
 // Ensure runtime directories exist in fresh deployments (especially with empty volumes).
 const ensureRuntimeDirs = () => {
@@ -162,6 +165,7 @@ const ensureRuntimeDirs = () => {
 ensureRuntimeDirs();
 
 const CONTENT_FILE_PATHS = {
+    [SITE_NEW_STRUCT_ID]: SITE_NEW_STRUCT_PATH,
     'site-content': SITE_CONTENT_PATH,
     'events': EVENTS_FILE_PATH,
     'news': NEWS_FILE_PATH,
@@ -173,6 +177,7 @@ const CONTENT_FILE_PATHS = {
 let dbReady = false;
 let dbInitInProgress = false;
 let lastDbInitAttemptAt = 0;
+let siteStructWriteQueue = Promise.resolve();
 
 // ------------------------------------------
 // DATABASE HELPERS & MIGRATION
@@ -233,9 +238,209 @@ const saveContentToFile = async (id, data) => {
     }
 };
 
+const isPlainObject = (value) => Object.prototype.toString.call(value) === '[object Object]';
+const deepClone = (value) => JSON.parse(JSON.stringify(value));
+const normalizeListResource = (value) => {
+    if (!Array.isArray(value)) return [];
+    return value.filter(item => isPlainObject(item) || Array.isArray(item) || typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean' || item === null);
+};
+const resolvePageIdentity = (page) => {
+    if (!isPlainObject(page)) return '';
+    const raw = page.id ?? page.page_id;
+    return String(raw || '').trim().toLowerCase();
+};
+const mergeSiteContentPages = (currentValue, incomingValue) => {
+    const current = normalizeListResource(currentValue);
+    const incoming = normalizeListResource(incomingValue);
+    const currentById = new Map(current.map((item) => [resolvePageIdentity(item), item]));
+    const seen = new Set();
+    const merged = [];
+
+    incoming.forEach((item) => {
+        const pageId = resolvePageIdentity(item);
+        if (!pageId) {
+            merged.push(item);
+            return;
+        }
+
+        seen.add(pageId);
+        const previous = currentById.get(pageId);
+        if (!isPlainObject(previous) || !isPlainObject(item)) {
+            merged.push(item);
+            return;
+        }
+
+        merged.push({
+            ...previous,
+            ...item,
+            sections: Array.isArray(item.sections)
+                ? item.sections
+                : (Array.isArray(previous.sections) ? previous.sections : []),
+            images: Array.isArray(item.images)
+                ? item.images
+                : (Array.isArray(previous.images) ? previous.images : [])
+        });
+    });
+
+    current.forEach((item) => {
+        const pageId = resolvePageIdentity(item);
+        if (!pageId || seen.has(pageId)) return;
+        merged.push(item);
+    });
+
+    return merged;
+};
+
+const createDefaultSiteStruct = () => ({
+    schemaVersion: 1,
+    updatedAt: new Date().toISOString(),
+    resources: SITE_NEW_STRUCT_RESOURCE_IDS.reduce((acc, id) => {
+        acc[id] = [];
+        return acc;
+    }, {})
+});
+
+const normalizeSiteStruct = (value) => {
+    const base = createDefaultSiteStruct();
+    if (!isPlainObject(value)) return base;
+
+    const rawResources = isPlainObject(value.resources) ? value.resources : {};
+    const normalizedResources = { ...base.resources };
+
+    SITE_NEW_STRUCT_RESOURCE_IDS.forEach((id) => {
+        normalizedResources[id] = normalizeListResource(rawResources[id]);
+    });
+
+    for (const [key, rawValue] of Object.entries(rawResources)) {
+        if (normalizedResources[key] !== undefined) continue;
+        if (Array.isArray(rawValue)) {
+            normalizedResources[key] = normalizeListResource(rawValue);
+        }
+    }
+
+    return {
+        schemaVersion: Number.isFinite(value.schemaVersion) ? Number(value.schemaVersion) : base.schemaVersion,
+        updatedAt: typeof value.updatedAt === 'string' && value.updatedAt.trim().length > 0
+            ? value.updatedAt
+            : base.updatedAt,
+        resources: normalizedResources
+    };
+};
+
+const runSiteStructWrite = async (writer) => {
+    const run = siteStructWriteQueue.then(() => writer());
+    siteStructWriteQueue = run.catch((error) => {
+        console.error('[site-new-struct] queued write failed:', error);
+    });
+    return run;
+};
+
+const readLegacyResourceDirect = async (resourceId) => {
+    const dbData = await getContentFromDB(resourceId);
+    if (dbData !== null) return normalizeListResource(dbData);
+    const fileData = await getContentFromFile(resourceId);
+    if (fileData !== null) return normalizeListResource(fileData);
+    return [];
+};
+
+const readSiteStructFromLegacy = async () => {
+    const struct = createDefaultSiteStruct();
+    for (const resourceId of SITE_NEW_STRUCT_RESOURCE_IDS) {
+        struct.resources[resourceId] = await readLegacyResourceDirect(resourceId);
+    }
+    return struct;
+};
+
+const hydrateMissingStructResources = async (value) => {
+    const next = normalizeSiteStruct(value);
+    let changed = false;
+
+    for (const resourceId of SITE_NEW_STRUCT_RESOURCE_IDS) {
+        if (Array.isArray(next.resources?.[resourceId]) && next.resources[resourceId].length > 0) continue;
+        const legacyData = await readLegacyResourceDirect(resourceId);
+        if (legacyData.length > 0) {
+            next.resources[resourceId] = legacyData;
+            changed = true;
+        }
+    }
+
+    return { next, changed };
+};
+
+const persistSiteStruct = async (value) => {
+    const next = normalizeSiteStruct(value);
+    next.updatedAt = new Date().toISOString();
+    next.schemaVersion = Number(next.schemaVersion || 1);
+
+    const dbSaved = await saveContentToDB(SITE_NEW_STRUCT_ID, next);
+    const fileSaved = await saveContentToFile(SITE_NEW_STRUCT_ID, next);
+    let legacySaved = false;
+
+    for (const resourceId of SITE_NEW_STRUCT_RESOURCE_IDS) {
+        const resourceData = normalizeListResource(next.resources?.[resourceId]);
+        if (await saveContentToFile(resourceId, resourceData)) legacySaved = true;
+    }
+
+    return dbSaved || fileSaved || legacySaved;
+};
+
+const getSiteStruct = async () => {
+    const dbStruct = await getContentFromDB(SITE_NEW_STRUCT_ID);
+    if (dbStruct !== null) {
+        const hydrated = await hydrateMissingStructResources(dbStruct);
+        if (hydrated.changed) await persistSiteStruct(hydrated.next);
+        return hydrated.next;
+    }
+
+    const fileStruct = await getContentFromFile(SITE_NEW_STRUCT_ID);
+    if (fileStruct !== null) {
+        const hydrated = await hydrateMissingStructResources(fileStruct);
+        await saveContentToDB(SITE_NEW_STRUCT_ID, hydrated.next);
+        if (hydrated.changed) await persistSiteStruct(hydrated.next);
+        return hydrated.next;
+    }
+
+    const mergedFromLegacy = await readSiteStructFromLegacy();
+    const hasLegacyData = SITE_NEW_STRUCT_RESOURCE_IDS.some((resourceId) =>
+        Array.isArray(mergedFromLegacy.resources?.[resourceId]) && mergedFromLegacy.resources[resourceId].length > 0
+    );
+    if (hasLegacyData || dbReady) {
+        await persistSiteStruct(mergedFromLegacy);
+    }
+    return mergedFromLegacy;
+};
+
+const getSiteStructResource = async (resourceId, fallback = []) => {
+    const struct = await getSiteStruct();
+    const resource = struct.resources?.[resourceId];
+    if (!Array.isArray(resource)) return fallback;
+    return deepClone(resource);
+};
+
+const saveSiteStructResource = async (resourceId, data) => {
+    const normalizedResource = normalizeListResource(data);
+    return runSiteStructWrite(async () => {
+        const current = await getSiteStruct();
+        const existingResource = normalizeListResource(current.resources?.[resourceId]);
+        current.resources[resourceId] = resourceId === 'site-content'
+            ? mergeSiteContentPages(existingResource, normalizedResource)
+            : normalizedResource;
+        current.schemaVersion = Number(current.schemaVersion || 1) + 1;
+        return persistSiteStruct(current);
+    });
+};
+
 const getContent = async (id, fallback = []) => {
     if (!dbReady && !dbInitInProgress && Date.now() - lastDbInitAttemptAt > 15000) {
         initDB(1).catch(() => { });
+    }
+
+    if (id === SITE_NEW_STRUCT_ID) {
+        return getSiteStruct();
+    }
+
+    if (SITE_NEW_STRUCT_RESOURCE_IDS.includes(id)) {
+        return getSiteStructResource(id, fallback);
     }
 
     const dbData = await getContentFromDB(id);
@@ -252,19 +457,48 @@ const saveContent = async (id, data) => {
         initDB(1).catch(() => { });
     }
 
+    if (id === SITE_NEW_STRUCT_ID) {
+        return runSiteStructWrite(async () => {
+            const current = await getSiteStruct();
+            const incoming = isPlainObject(data) ? data : {};
+            const incomingResources = isPlainObject(incoming.resources) ? incoming.resources : {};
+            const mergedResources = {
+                ...(isPlainObject(current.resources) ? current.resources : {})
+            };
+
+            for (const [resourceId, resourceValue] of Object.entries(incomingResources)) {
+                if (!Array.isArray(resourceValue)) continue;
+                mergedResources[resourceId] = normalizeListResource(resourceValue);
+            }
+
+            const { resources: _ignoredResources, ...incomingTopLevel } = incoming;
+            const merged = {
+                ...current,
+                ...incomingTopLevel,
+                resources: mergedResources,
+                schemaVersion: Number(current.schemaVersion || 1) + 1
+            };
+            return persistSiteStruct(merged);
+        });
+    }
+
+    if (SITE_NEW_STRUCT_RESOURCE_IDS.includes(id)) {
+        return saveSiteStructResource(id, data);
+    }
+
     const dbSaved = await saveContentToDB(id, data);
     const fileSaved = await saveContentToFile(id, data);
     return dbSaved || fileSaved;
 };
 
-const isPlainObject = (value) => Object.prototype.toString.call(value) === '[object Object]';
 const normalizeListPayload = (value) => {
     if (!Array.isArray(value)) return null;
-    return value.filter(item => isPlainObject(item) || Array.isArray(item) || typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean' || item === null);
+    return normalizeListResource(value);
 };
 
 const migrateFilesToDB = async () => {
     const filesToMigrate = [
+        { id: SITE_NEW_STRUCT_ID, path: SITE_NEW_STRUCT_PATH },
         { id: 'site-content', path: SITE_CONTENT_PATH },
         { id: 'events', path: EVENTS_FILE_PATH },
         { id: 'news', path: NEWS_FILE_PATH },
@@ -703,6 +937,45 @@ app.post('/api/save-content', async (req, res) => {
     } catch (error) {
         console.error('Save error:', error);
         res.status(500).json({ error: 'Failed to save content' });
+    }
+});
+
+// API: Get unified site structure
+app.get('/api/site-new-struct', async (req, res) => {
+    try {
+        const data = await getContent(SITE_NEW_STRUCT_ID, createDefaultSiteStruct());
+        res.json(data);
+    } catch (error) {
+        console.error('Error reading site-new-struct:', error);
+        res.status(500).json({ error: 'Failed to read site-new-struct' });
+    }
+});
+
+// API: Save unified site structure (full or partial merge)
+app.post('/api/site-new-struct', async (req, res) => {
+    try {
+        if (!isPlainObject(req.body)) {
+            return res.status(400).json({ error: 'Invalid site-new-struct payload' });
+        }
+
+        const current = await getContent(SITE_NEW_STRUCT_ID, createDefaultSiteStruct());
+        const incomingResources = isPlainObject(req.body.resources) ? req.body.resources : {};
+        const merged = {
+            ...current,
+            ...req.body,
+            resources: {
+                ...(isPlainObject(current.resources) ? current.resources : {}),
+                ...incomingResources
+            }
+        };
+
+        const ok = await saveContent(SITE_NEW_STRUCT_ID, merged);
+        if (!ok) return res.status(500).json({ error: 'Failed to save site-new-struct' });
+        const latest = await getContent(SITE_NEW_STRUCT_ID, createDefaultSiteStruct());
+        res.json({ success: true, data: latest });
+    } catch (error) {
+        console.error('Error saving site-new-struct:', error);
+        res.status(500).json({ error: 'Failed to save site-new-struct' });
     }
 });
 
@@ -1154,7 +1427,10 @@ app.all('/api/extract-content', async (req, res) => {
 
         newContent.sort((a, b) => (orderWeight[a.id] || 100) - (orderWeight[b.id] || 100));
 
-        await fsPromises.writeFile(SITE_CONTENT_PATH, JSON.stringify(newContent, null, 2));
+        const syncOk = await saveContent('site-content', newContent);
+        if (!syncOk) {
+            throw new Error('Failed to persist extracted site content');
+        }
 
         // GENERATE SITEMAP (Page-Based Grouping)
         const sitemap = [

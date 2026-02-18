@@ -1079,7 +1079,7 @@ const VisualEditor: React.FC = () => {
     useEffect(() => {
         if (autoSyncTriggeredRef.current) return;
         autoSyncTriggeredRef.current = true;
-        startExtraction();
+        // Prevent destructive auto-rebuild on page open; extraction stays manual.
     }, []);
 
     // Sync URL params to state
