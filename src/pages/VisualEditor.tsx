@@ -217,6 +217,23 @@ const toAbsoluteUrl = (rawValue: string) => {
     return `${window.location.origin}${normalizedPath}`;
 };
 
+const toStoredUrl = (rawValue: string) => {
+    const value = (rawValue || '').trim();
+    if (!value) return '';
+    if (/^https?:\/\//i.test(value)) {
+        try {
+            const parsed = new URL(value);
+            if (parsed.pathname.startsWith('/uploads/')) {
+                return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+            }
+        } catch {
+            // Keep as-is if URL parsing fails.
+        }
+        return value;
+    }
+    return value.startsWith('/') ? value : `/${value}`;
+};
+
 const containsHtmlNoise = (value: string) =>
     /&(?:lt|gt|nbsp|quot|amp);|<\/?[a-z][^>]*>/i.test(value || '');
 
@@ -1549,7 +1566,7 @@ const VisualEditor: React.FC = () => {
             const safeIcon = RULE_TAB_ICON_PRESETS.includes(row.icon) ? row.icon : 'Info';
             const safeDocName = normalizePlainText(row.docName || `${safeId.toUpperCase()}_PROTOKOLU.PDF`);
             const safeDocButton = normalizePlainText(row.docButton || 'PDF YÜKLƏ');
-            const safeDocUrl = toAbsoluteUrl(row.docUrl || '');
+            const safeDocUrl = toStoredUrl(row.docUrl || '');
 
             nextSections.push(
                 { id: `RULE_TAB_${tabNo}_ID`, type: 'text', label: `Qayda Sekməsi ${tabNo} ID`, value: safeId },

@@ -185,6 +185,23 @@ const RulesPage: React.FC = () => {
   }, [activeSection, ruleSections]);
 
   const currentSection = ruleSections.find(s => s.id === activeSection) || ruleSections[0];
+  const resolveDocUrl = (rawUrl?: string) => {
+    const value = (rawUrl || '').trim();
+    if (!value) return '';
+    if (/^https?:\/\//i.test(value)) {
+      try {
+        const parsed = new URL(value);
+        // Keep uploaded files portable across admin/frontend hosts.
+        if (parsed.pathname.startsWith('/uploads/')) {
+          return `${window.location.origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+        }
+      } catch {
+        return value;
+      }
+      return value;
+    }
+    return value.startsWith('/') ? value : `/${value}`;
+  };
 
   return (
     <div className="bg-[#0A0A0A] min-h-screen py-16 px-6 lg:px-20 text-white">
@@ -241,7 +258,7 @@ const RulesPage: React.FC = () => {
             <button
               className="w-full bg-[#FF4D00] text-black py-4 font-black italic text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-white transition-all transform -skew-x-12"
               onClick={() => {
-                const url = currentSection?.docUrl || getUrl('BTN_DOWNLOAD_PDF', '');
+                const url = resolveDocUrl(currentSection?.docUrl || getUrl('BTN_DOWNLOAD_PDF', ''));
                 if (url) window.open(url, '_blank');
               }}
             >
