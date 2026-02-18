@@ -339,12 +339,15 @@ const isSectionVisibleInAdmin = (_section: Section) => {
 
 const shouldSkipSectionInEditor = (section: Section) => {
     const key = extractSectionKey(section);
-    // User requested: hide all underscore-style technical keys in editor.
-    if ((section.id || '').includes('_')) return true;
-    if (key && key.includes('_')) return true;
-    // Keep human-facing key fields editable, but hide raw token placeholders.
-    if (key && key.includes('_') && looksLikeKeyToken(normalizePlainText(section.value || ''))) return true;
-    if (!key && looksLikeKeyToken(section.value)) return true;
+    const normalizedValue = normalizePlainText(section.value || '');
+    const normalizedLabel = normalizePlainText(section.label || '');
+    // Keep real business keys editable, but hide token-only placeholders.
+    if (key && looksLikeKeyToken(normalizedValue)) {
+        const upperValue = normalizedValue.toUpperCase();
+        if (upperValue === key.toUpperCase()) return true;
+        if (normalizedLabel && upperValue === normalizedLabel.toUpperCase()) return true;
+    }
+    if (!key && looksLikeKeyToken(normalizedValue)) return true;
     return false;
 };
 
@@ -418,7 +421,7 @@ const componentLabels: Record<string, string> = {
 };
 
 const TAB_PAGE_GROUPS: Record<string, string[]> = {
-    home: ['navbar', 'hero', 'marquee', 'categoryleaders', 'footer'],
+    home: ['navbar', 'hero', 'marquee', 'categoryleaders', 'partners', 'footer'],
     // About page in frontend reads all content from "about" page id.
     abouttab: ['about'],
     newstab: ['newspage'],
@@ -436,8 +439,11 @@ const PAGE_TO_TAB_GROUP: Record<string, string> = Object.entries(TAB_PAGE_GROUPS
     return acc;
 }, {} as Record<string, string>);
 
+const FORCE_SINGLE_PAGE_PARAMS = new Set(['privacypolicypage', 'termsofservicepage']);
+
 const resolvePageGroup = (pageParam?: string | null) => {
     if (!pageParam) return [];
+    if (FORCE_SINGLE_PAGE_PARAMS.has(pageParam)) return [pageParam];
     if (TAB_PAGE_GROUPS[pageParam]) return TAB_PAGE_GROUPS[pageParam];
     const tabKey = PAGE_TO_TAB_GROUP[pageParam];
     if (tabKey && TAB_PAGE_GROUPS[tabKey]) return TAB_PAGE_GROUPS[tabKey];
@@ -2561,7 +2567,7 @@ const VisualEditor: React.FC = () => {
             return { page: pages[pageIdx], pageIdx };
         })
         .filter(Boolean) as { page: PageContent; pageIdx: number }[];
-    const isGroupedRequest = !!pageParam && (
+    const isGroupedRequest = !!pageParam && activeGroupIds.length > 1 && (
         !!TAB_PAGE_GROUPS[pageParam] ||
         !!PAGE_TO_TAB_GROUP[pageParam]
     );
