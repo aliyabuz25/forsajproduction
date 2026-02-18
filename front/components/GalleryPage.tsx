@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PlayCircle, Image as ImageIcon, Video, ArrowRight, Zap, Maximize2, Calendar, X } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
 
@@ -10,6 +10,8 @@ const GalleryPage: React.FC = () => {
   const [dynamicVideos, setDynamicVideos] = useState<any[]>([]);
   const [dynamicPhotos, setDynamicPhotos] = useState<any[]>([]);
   const { getText } = useSiteContent('gallerypage');
+  const lightboxRef = useRef<any>(null);
+  const lightboxReadyRef = useRef(false);
 
   const extractYoutubeId = (url: string) => {
     if (!url) return null;
@@ -68,6 +70,89 @@ const GalleryPage: React.FC = () => {
     };
     loadGallery();
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const head = document.head;
+    const cssId = 'glightbox-cdn-css';
+    const jsId = 'glightbox-cdn-js';
+
+    if (!document.getElementById(cssId)) {
+      const link = document.createElement('link');
+      link.id = cssId;
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css';
+      head.appendChild(link);
+    }
+
+    const initLightbox = () => {
+      const Glightbox = (window as any).GLightbox;
+      if (!mounted || !Glightbox || !dynamicPhotos.length) return;
+
+      const elements = dynamicPhotos.map((photo: any) => ({
+        href: photo.url || photo.path,
+        type: 'image',
+        title: photo.title || photo.alt || ''
+      }));
+
+      if (lightboxRef.current) {
+        try {
+          lightboxRef.current.destroy();
+        } catch {
+          // no-op
+        }
+      }
+
+      lightboxRef.current = Glightbox({
+        elements,
+        touchNavigation: true,
+        loop: true,
+        closeButton: true
+      });
+      lightboxReadyRef.current = true;
+    };
+
+    const existing = document.getElementById(jsId) as HTMLScriptElement | null;
+    if (existing) {
+      if ((window as any).GLightbox) {
+        initLightbox();
+      } else {
+        existing.addEventListener('load', initLightbox, { once: true });
+      }
+    } else {
+      const script = document.createElement('script');
+      script.id = jsId;
+      script.src = 'https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js';
+      script.async = true;
+      script.onload = initLightbox;
+      head.appendChild(script);
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [dynamicPhotos]);
+
+  useEffect(() => {
+    return () => {
+      if (lightboxRef.current) {
+        try {
+          lightboxRef.current.destroy();
+        } catch {
+          // no-op
+        }
+      }
+    };
+  }, []);
+
+  const openPhotoPreview = (index: number, photo: any) => {
+    if (lightboxReadyRef.current && lightboxRef.current) {
+      lightboxRef.current.openAt(index);
+      return;
+    }
+    const fallback = photo?.url || photo?.path;
+    if (fallback) window.open(fallback, '_blank');
+  };
 
   const VideoModal = () => {
     if (!playingVideoId) return null;
@@ -164,6 +249,7 @@ const GalleryPage: React.FC = () => {
                   <div
                     key={photo.id}
                     className="group/item relative aspect-square bg-[#111] overflow-hidden cursor-pointer shadow-lg hover:z-20 transition-all duration-300"
+                    onClick={() => openPhotoPreview(dynamicPhotos.findIndex((p: any) => p.id === photo.id), photo)}
                   >
                     <img
                       src={photo.url || photo.path}
