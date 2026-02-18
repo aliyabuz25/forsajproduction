@@ -127,10 +127,9 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
     .filter((s) => {
       const label = (s.label || '').toUpperCase();
       const value = (s.value || '').toUpperCase();
-      const url = (s.url || '').trim();
-      if (!url) return false;
       if (label.includes('SITE_LOGO') || label.includes('ALT:')) return false;
       if (value.includes('SITE_LOGO') || value.includes('FORSAJ LOGO')) return false;
+      if (!((s.value || '').trim() || (s.label || '').trim())) return false;
       return true;
     })
     .map((s) => {
@@ -146,34 +145,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
   const resolvedNavItems = navItems.length > 0 ? navItems : defaultNavItems;
 
   const languages = ['AZ', 'RU', 'ENG'];
-  const navLabelByLang: Record<'RU' | 'ENG', Record<string, string>> = {
-    RU: {
-      home: 'ДОМАШНЯЯ СТРАНИЦА',
-      about: 'О НАС',
-      news: 'НОВОСТИ',
-      events: 'СОБЫТИЯ',
-      drivers: 'ВОДИТЕЛИ',
-      gallery: 'ГАЛЕРЕЯ',
-      rules: 'ПРАВИЛА',
-      contact: 'КОНТАКТЫ'
-    },
-    ENG: {
-      home: 'HOME',
-      about: 'ABOUT US',
-      news: 'NEWS',
-      events: 'EVENTS',
-      drivers: 'DRIVERS',
-      gallery: 'GALLERY',
-      rules: 'RULES',
-      contact: 'CONTACT'
-    }
-  };
-
-  const getLocalizedNavLabel = (item: { activeView: string | null; name: string }) => {
-    if (language === 'AZ') return item.name;
-    const dictionary = navLabelByLang[language as 'RU' | 'ENG'];
-    return (item.activeView && dictionary?.[item.activeView]) || item.name;
-  };
 
   return (
     <nav className="sticky top-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-md border-b border-white/5 px-6 lg:px-20 py-4 flex items-center justify-between shadow-2xl">
@@ -214,7 +185,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
               : 'text-gray-400 hover:text-white hover:bg-white/5 border-2 border-transparent'
               }`}
           >
-            <span className="transform skew-x-12 block whitespace-nowrap">{getLocalizedNavLabel(item)}</span>
+            <span className="transform skew-x-12 block whitespace-nowrap">{item.name}</span>
           </button>
         ))}
       </div>

@@ -7,6 +7,7 @@ const About: React.FC = () => {
   const { getPage, getText, getImage } = useSiteContent('about');
   const { getText: getGeneralText } = useSiteContent('general');
   const page = getPage('about');
+  const valuesPage = getPage('values');
   const toPlainText = (value: string) => {
     if (!value) return '';
     let current = value;
@@ -54,7 +55,9 @@ const About: React.FC = () => {
     const getValueSuffix = (id: string) => (id.split('val-icon-')[1] || id.split('val-title-')[1] || id.split('val-desc-')[1] || '').trim();
     const valueBySuffix = new Map<string, { icon?: string; title?: string; desc?: string }>();
 
-    page.sections.forEach((section) => {
+    const valueSections = [...(page.sections || []), ...(valuesPage?.sections || [])];
+
+    valueSections.forEach((section) => {
       if (!section.id.includes('val-icon-') && !section.id.includes('val-title-') && !section.id.includes('val-desc-')) return;
       const suffix = getValueSuffix(section.id) || section.id;
       const current = valueBySuffix.get(suffix) || {};

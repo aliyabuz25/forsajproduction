@@ -1293,6 +1293,27 @@ const VisualEditor: React.FC = () => {
         toast.success('Statistika silindi');
     };
 
+    const addCoreValueRow = (pageIdx: number = selectedPageIndex) => {
+        const newPages = [...pages];
+        let targetIdx = pageIdx;
+
+        if (targetIdx < 0 || targetIdx >= newPages.length || !['about', 'values'].includes(newPages[targetIdx]?.id)) {
+            targetIdx = newPages.findIndex((p) => p.id === 'about');
+        }
+        if (targetIdx < 0 || targetIdx >= newPages.length) return;
+
+        const current = newPages[targetIdx];
+        const suffix = `${Date.now()}`;
+        current.sections.push(
+            { id: `val-icon-${suffix}`, type: 'text', label: 'İkon Kodu (Shield/Users/Leaf/Zap)', value: 'Shield' },
+            { id: `val-title-${suffix}`, type: 'text', label: 'Dəyər Başlığı', value: 'YENİ DƏYƏR' },
+            { id: `val-desc-${suffix}`, type: 'text', label: 'Dəyər Təsviri', value: 'Dəyər təsvirini daxil edin.' }
+        );
+
+        setPages(newPages);
+        toast.success('Yeni dəyər əlavə edildi');
+    };
+
     const getPartnerRows = (page: PageContent | undefined): PartnerRow[] => {
         if (!page) return [];
         const rows = new Map<number, PartnerRow>();
@@ -3857,12 +3878,8 @@ const VisualEditor: React.FC = () => {
                                                 <Trophy size={14} /> Statistika Əlavə Et
                                             </button>
                                         )}
-                                        {currentPage.id === 'values' && (
-                                            <button className="add-field-minimal" onClick={() => {
-                                                addField('text', 'İkon Kodu (Shield/Users/Leaf/Zap)', `val-icon-${Date.now()}`);
-                                                addField('text', 'Dəyər Başlığı', `val-title-${Date.now()}`);
-                                                addField('text', 'Dəyər Təsviri', `val-desc-${Date.now()}`);
-                                            }} style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                                        {(currentPage.id === 'about' || currentPage.id === 'values') && (
+                                            <button className="add-field-minimal" onClick={() => addCoreValueRow()} style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
                                                 <Plus size={14} /> Yeni Dəyər Əlavə Et
                                             </button>
                                         )}

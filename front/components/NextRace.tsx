@@ -17,8 +17,9 @@ interface Event {
 }
 
 const NextRace: React.FC<NextRaceProps> = ({ onViewChange }) => {
-  const { getText, getUrl, getImage } = useSiteContent('nextrace');
+  const { getText, getUrl, getImage, getPage } = useSiteContent('nextrace');
   const [nextEvent, setNextEvent] = useState<Event | null>(null);
+  const nextRacePage = getPage('nextrace');
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -54,7 +55,8 @@ const NextRace: React.FC<NextRaceProps> = ({ onViewChange }) => {
   const displayCategory = nextEvent?.category || getText('RACE_TYPE', 'CHALLENGE');
   const displayFullLocation = nextEvent?.title || getText('RACE_LOCATION', 'SUMQAYIT SAHİL TRASI // SECTOR 04');
   const raceFallbackImage = getImage('race-bg', 'https://images.unsplash.com/photo-1541447271487-09612b3f49f7?q=80&w=1974&auto=format&fit=crop');
-  const displayImage = nextEvent?.img || raceFallbackImage.path;
+  const configuredNextRaceImage = (nextRacePage?.images || []).find((img) => (img.path || '').trim())?.path || '';
+  const displayImage = configuredNextRaceImage || nextEvent?.img || raceFallbackImage.path;
 
   return (
     <section className="py-24 px-6 lg:px-20 bg-[#0F0F0F]">

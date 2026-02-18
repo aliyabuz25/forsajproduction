@@ -87,19 +87,19 @@ const CategoryLeaders: React.FC<CategoryLeadersProps> = ({ onViewChange }) => {
 
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 group-hover:opacity-60 transition-opacity"></div>
 
-              <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end">
+              <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
                 <div className="flex flex-col">
-                  <h3 className="text-white text-2xl font-black italic leading-none tracking-tight uppercase mb-1">
+                  <h3 className="text-white text-xl sm:text-2xl font-black italic leading-none tracking-tight uppercase mb-1 break-words">
                     {leader.name}
                   </h3>
-                  <p className="text-[#FF4D00] text-[9px] font-black italic uppercase tracking-wider">
+                  <p className="text-[#FF4D00] text-[8px] sm:text-[9px] font-black italic uppercase tracking-wider break-words">
                     {leader.team}
                   </p>
                 </div>
 
-                <div className="text-right flex flex-col items-end">
+                <div className="text-left sm:text-right flex flex-col items-start sm:items-end">
                   <span className="text-gray-400 font-black italic text-[8px] uppercase leading-none mb-1">{getText('SCORE_LABEL', 'XAL')}</span>
-                  <span className="text-white text-5xl font-black italic leading-none">
+                  <span className="text-white text-3xl sm:text-5xl font-black italic leading-none">
                     {leader.score}
                   </span>
                 </div>
