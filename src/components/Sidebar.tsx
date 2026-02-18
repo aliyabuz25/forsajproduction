@@ -38,6 +38,8 @@ interface SidebarProps {
     onLogout: () => void;
 }
 
+type SidebarGroupKey = 'content' | 'legal' | 'management';
+
 const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
     const userRole = user?.role || 'secondary';
     const location = useLocation();
@@ -104,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
     };
 
     const renderLinkItem = (item: SidebarItem, parentIcon?: string, forcedPath?: string) => (
-        <li key={item.title} className="sidebar-item">
+        <li className="sidebar-item">
             <NavLink
                 to={normalizePath(forcedPath || item.path) || '#'}
                 className={() => `sidebar-link ${isCurrentActive(normalizePath(forcedPath || item.path)) ? 'active' : ''}`}
@@ -166,6 +168,62 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
         });
     };
 
+    const getFriendlyTitle = (title: string) => {
+        const key = normalizeText(title);
+        if (key === 'ana sehife / naviqasiya / footer') return 'Ana Səhifə';
+        if (key === 'sosyal') return 'Sosial Media';
+        return title;
+    };
+
+    const getGroupKey = (item: SidebarItem): SidebarGroupKey => {
+        const path = normalizePath(item.path || '') || '';
+        if (path.includes('page=privacypolicypage') || path.includes('page=termsofservicepage')) return 'legal';
+        if (path.startsWith('/users-management') || path.startsWith('/general-settings') || path.startsWith('/applications')) return 'management';
+        return 'content';
+    };
+
+    const getItemOrder = (item: SidebarItem) => {
+        const path = normalizePath(item.path || '') || '';
+        const title = normalizeText(item.title || '');
+
+        if (path.includes('page=home')) return 10;
+        if (path.includes('page=about')) return 20;
+        if (path.includes('mode=news')) return 30;
+        if (path.includes('mode=events')) return 40;
+        if (path.includes('mode=drivers')) return 50;
+        if (path.includes('mode=videos')) return 60;
+        if (path.includes('page=rulespage')) return 70;
+        if (path.includes('page=contactpage')) return 80;
+        if (path.includes('page=privacypolicypage')) return 90;
+        if (path.includes('page=termsofservicepage')) return 100;
+        if (path.startsWith('/users-management')) return 110;
+        if (path.includes('tab=general')) return 120;
+        if (path.includes('tab=social') || title === 'sosial media') return 130;
+        if (path.startsWith('/applications')) return 140;
+
+        return 999;
+    };
+
+    const groupLabels: Record<SidebarGroupKey, string> = {
+        content: 'SAYT MƏZMUNU',
+        legal: 'HÜQUQİ SƏHİFƏLƏR',
+        management: 'İDARƏETMƏ'
+    };
+
+    const preparedItems = dedupeMenuItems(filterByRole(menuItems))
+        .map((item) => ({ ...item, title: getFriendlyTitle(item.title) }))
+        .sort((a, b) => getItemOrder(a) - getItemOrder(b));
+
+    const groupedItems: Record<SidebarGroupKey, SidebarItem[]> = {
+        content: [],
+        legal: [],
+        management: []
+    };
+
+    preparedItems.forEach((item) => {
+        groupedItems[getGroupKey(item)].push(item);
+    });
+
     return (
         <aside className="sidebar">
             <div className="sidebar-header">
@@ -177,17 +235,31 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
 
             <div className="sidebar-content">
                 <div className="sidebar-section-label">ƏSAS NAVİQASİYA</div>
-                <ul className="sidebar-menu">
-                    {dedupeMenuItems(filterByRole(menuItems)).map(item => {
-                        const fallbackChildPath = item.children?.find(child => !!child.path)?.path;
-                        return renderLinkItem(item, item.icon, item.path || fallbackChildPath);
-                    })}
-                    {menuItems.length === 0 && (
-                        <div className="empty-sidebar-msg">
-                            <p>Menyu boşdur</p>
+                {(['content', 'legal', 'management'] as SidebarGroupKey[]).map((groupKey) => {
+                    const items = groupedItems[groupKey];
+                    if (!items.length) return null;
+                    return (
+                        <div key={groupKey} className="sidebar-group">
+                            <div className="sidebar-section-label sidebar-subsection-label">{groupLabels[groupKey]}</div>
+                            <ul className="sidebar-menu">
+                                {items.map(item => {
+                                    const fallbackChildPath = item.children?.find(child => !!child.path)?.path;
+                                    const effectivePath = item.path || fallbackChildPath;
+                                    return (
+                                        <React.Fragment key={`${item.title}-${effectivePath || 'no-path'}`}>
+                                            {renderLinkItem(item, item.icon, effectivePath)}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </ul>
                         </div>
-                    )}
-                </ul>
+                    );
+                })}
+                {preparedItems.length === 0 && (
+                    <div className="empty-sidebar-msg">
+                        <p>Menyu boşdur</p>
+                    </div>
+                )}
             </div>
 
             <div className="sidebar-footer">

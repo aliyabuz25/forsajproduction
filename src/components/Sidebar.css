@@ -88,6 +88,16 @@
     letter-spacing: 1px;
 }
 
+.sidebar-group + .sidebar-group {
+    margin-top: 0.65rem;
+}
+
+.sidebar-subsection-label {
+    padding-bottom: 0.5rem;
+    font-size: 0.62rem;
+    color: #6b7280;
+}
+
 .sidebar-menu {
     list-style: none;
     padding: 0 0.75rem;
