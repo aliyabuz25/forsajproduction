@@ -387,6 +387,7 @@ const resolvePageGroup = (pageParam?: string | null) => {
 };
 
 const CONTENT_VERSION_KEY = 'forsaj_site_content_version';
+const GROUPED_PAGE_COLLAPSE_KEY = 'forsaj_grouped_page_collapsed_v1';
 const normalizeOrder = (value: number | undefined, fallback: number) =>
     Number.isFinite(value as number) ? (value as number) : fallback;
 
@@ -404,6 +405,15 @@ const VisualEditor: React.FC = () => {
     const [activeImageField, setActiveImageField] = useState<{ pageIdx: number, imgId: string } | null>(null);
     const [newSectionTitle, setNewSectionTitle] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [groupedPageCollapsed, setGroupedPageCollapsed] = useState<Record<string, boolean>>(() => {
+        try {
+            const raw = localStorage.getItem(GROUPED_PAGE_COLLAPSE_KEY);
+            const parsed = raw ? JSON.parse(raw) : {};
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch {
+            return {};
+        }
+    });
 
     const [events, setEvents] = useState<EventItem[]>([]);
     const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
@@ -440,6 +450,10 @@ const VisualEditor: React.FC = () => {
             setEditorMode('extract');
         }
     }, [mode, pageParam]);
+
+    useEffect(() => {
+        localStorage.setItem(GROUPED_PAGE_COLLAPSE_KEY, JSON.stringify(groupedPageCollapsed));
+    }, [groupedPageCollapsed]);
     const [driverCategories, setDriverCategories] = useState<DriverCategory[]>([]);
     const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
     const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
@@ -3374,6 +3388,8 @@ const VisualEditor: React.FC = () => {
                                     </div>
                                 )}
                                 {activeGroupPages.map(({ page, pageIdx }) => {
+                                    const isMarqueePage = page.id === 'marquee';
+                                    const isMarqueeCollapsed = isMarqueePage && Boolean(groupedPageCollapsed[page.id]);
                                     const pageSections = (page.sections || [])
                                         .filter((section) => {
                                             if (!isSectionVisibleInAdmin(section) || shouldSkipSectionInEditor(section)) return false;
@@ -3411,6 +3427,36 @@ const VisualEditor: React.FC = () => {
                                                 </h2>
                                             </div>
 
+                                            {isMarqueePage && (
+                                                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.9rem', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '10px', background: '#f8fafc' }}>
+                                                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={page.active !== false}
+                                                            onChange={(e) => {
+                                                                const newPages = [...pages];
+                                                                if (!newPages[pageIdx]) return;
+                                                                newPages[pageIdx].active = e.target.checked;
+                                                                setPages(newPages);
+                                                            }}
+                                                        />
+                                                        Marquee aktivdir
+                                                    </label>
+                                                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isMarqueeCollapsed}
+                                                            onChange={(e) => {
+                                                                setGroupedPageCollapsed((prev) => ({ ...prev, [page.id]: e.target.checked }));
+                                                            }}
+                                                        />
+                                                        Paneldə gizlə
+                                                    </label>
+                                                </div>
+                                            )}
+
+                                            {(page.id !== 'marquee' || !isMarqueeCollapsed) && (
+                                            <>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                                                 {page.id === 'about' && (
                                                     <div className="field-item-wrapper" style={{ position: 'relative', background: '#fcfcfd', padding: '1rem', borderRadius: '12px', border: '1px solid #f0f0f2' }}>
@@ -3793,6 +3839,14 @@ const VisualEditor: React.FC = () => {
                                                     ))}
                                                 </div>
                                             </div>
+                                            </>
+                                            )}
+
+                                            {isMarqueeCollapsed && (
+                                                <div className="empty-fields-tip" style={{ textAlign: 'center', padding: '1rem', border: '1px dashed #cbd5e1', borderRadius: '10px', color: '#64748b' }}>
+                                                    Marquee bölməsi paneldə gizlədildi. Yuxarıdakı checkbox ilə geri aça bilərsiniz.
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
