@@ -3,16 +3,28 @@ import { Activity } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
 
 const Marquee: React.FC = () => {
-  const { getPage, getImage } = useSiteContent('marquee');
+  const { getPage, getImage, getText } = useSiteContent('marquee');
   const marqueePage = getPage('marquee');
   const marqueeImage = getImage('marquee-image', '');
 
   if (!marqueePage || marqueePage.active === false) return null;
 
-  const text =
-    marqueePage.sections?.find((section: any) => section.id === 'MARQUEE_TEXT')?.value ||
-    marqueePage.sections?.[0]?.value ||
-    'FORSAJ CLUB';
+  const isKeyLike = (value: string) => /^[A-Z0-9_]+$/.test((value || '').trim());
+  const getClean = (value: string) => {
+    const normalized = (value || '').trim();
+    if (!normalized) return '';
+    if (isKeyLike(normalized)) return '';
+    return normalized;
+  };
+
+  const textFromKey = getClean(getText('MARQUEE_TEXT', ''));
+  const textFromExactSection = getClean(
+    marqueePage.sections?.find((section: any) => section.id === 'MARQUEE_TEXT')?.value || ''
+  );
+  const textFromFirstSection = getClean(
+    marqueePage.sections?.find((section: any) => getClean(section?.value || ''))?.value || ''
+  );
+  const text = textFromKey || textFromExactSection || textFromFirstSection || 'FORSAJ CLUB';
   const marqueeLink =
     marqueePage.sections?.find((section: any) => section.id === 'MARQUEE_LINK')?.value?.trim() || '';
   const rawLinkActive =
