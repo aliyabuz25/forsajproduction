@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Save, Type, Image as ImageIcon, Layout, Globe, Plus, Trash2, X, Search, Calendar, FileText, Trophy, Video, Play, ChevronUp, ChevronDown, Shield, Users, Leaf, Target, Star, Flag, ShieldCheck, Truck, Zap } from 'lucide-react';
+import { Save, Type, Image as ImageIcon, Layout, Globe, Plus, Trash2, X, Search, Calendar, FileText, Trophy, Video, Play, ChevronUp, ChevronDown, Shield, Users, Leaf, ShieldCheck, Truck, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
@@ -97,16 +97,12 @@ const QUILL_MODULES = {
     ],
 };
 
-const ICON_PRESETS = ['Shield', 'Users', 'Leaf', 'Zap', 'Target', 'Globe', 'Star', 'Flag'];
-const ICON_PRESET_COMPONENTS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+const CORE_VALUE_ICON_PRESETS = ['Shield', 'Users', 'Leaf', 'Zap'] as const;
+const CORE_VALUE_ICON_COMPONENTS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
     Shield,
     Users,
     Leaf,
-    Zap,
-    Target,
-    Globe,
-    Star,
-    Flag
+    Zap
 };
 const PARTNER_ICON_PRESETS = ['ShieldCheck', 'Truck', 'Globe', 'Zap'];
 const PARTNER_ICON_COMPONENTS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -528,6 +524,11 @@ const HOME_EDIT_TABS: Array<{ id: HomeEditTab; label: string }> = [
     { id: 'navbar', label: 'Naviqasiya' },
     { id: 'footer', label: 'Footer' }
 ];
+const HOME_TAB_PAGE_IDS: Record<HomeEditTab, string[]> = {
+    all: TAB_PAGE_GROUPS.home,
+    navbar: ['navbar'],
+    footer: ['footer']
+};
 
 const resolvePageGroup = (pageParam?: string | null) => {
     if (!pageParam) return [];
@@ -626,12 +627,17 @@ const VisualEditor: React.FC = () => {
 
     useEffect(() => {
         if (editorMode !== 'extract') return;
-        if (pageParam === 'navbar') {
-            setHomeEditTab('navbar');
-            return;
-        }
-        if (pageParam === 'footer') {
-            setHomeEditTab('footer');
+        const homeGroupKey = pageParam ? PAGE_TO_TAB_GROUP[pageParam] : null;
+        if (pageParam && (pageParam === 'home' || homeGroupKey === 'home')) {
+            if (pageParam === 'navbar') {
+                setHomeEditTab('navbar');
+                return;
+            }
+            if (pageParam === 'footer') {
+                setHomeEditTab('footer');
+                return;
+            }
+            setHomeEditTab('all');
             return;
         }
         setHomeEditTab('all');
@@ -2747,8 +2753,9 @@ const VisualEditor: React.FC = () => {
         !!PAGE_TO_TAB_GROUP[pageParam]
     );
     const isGroupedTabView = editorMode === 'extract' && isGroupedRequest && activeGroupPages.length > 0;
-    const groupedPagesToRender = pageParam === 'home'
-        ? activeGroupPages.filter(({ page }) => homeEditTab === 'all' || page.id === homeEditTab)
+    const isHomeGroupedView = !!pageParam && (pageParam === 'home' || PAGE_TO_TAB_GROUP[pageParam] === 'home');
+    const groupedPagesToRender = isHomeGroupedView
+        ? activeGroupPages.filter(({ page }) => HOME_TAB_PAGE_IDS[homeEditTab].includes(page.id))
         : activeGroupPages;
     const searchQuery = searchTerm.trim().toLowerCase();
     const matchesSearch = (...values: Array<string | number | undefined>) => {
@@ -2810,10 +2817,6 @@ const VisualEditor: React.FC = () => {
         );
     };
 
-    const isIconField = (section: Section) =>
-        section.id.startsWith('val-icon-') ||
-        /ikon|icon/i.test(section.label || '');
-
     const isCoreValueField = (section: Section) => /^val-(icon|title|desc)-/i.test(section.id);
 
     const getCoreValueFieldType = (section: Section): 'icon' | 'title' | 'desc' | null => {
@@ -2844,9 +2847,9 @@ const VisualEditor: React.FC = () => {
         const realIndex = realSections.findIndex(s => s.id === section.id);
         const canMoveUp = realIndex > 0;
         const canMoveDown = realIndex >= 0 && realIndex < realSections.length - 1;
-        const iconField = isIconField(section);
         const coreValueField = isCoreValueField(section);
         const coreValueFieldType = getCoreValueFieldType(section);
+        const iconField = coreValueFieldType === 'icon';
         const simpleCoreValueField = coreValueField && !showAdvancedEditor;
         const pageIdForStorage = pageContext?.id || currentPage?.id || 'unknown';
         const collapseStorageKey = getSectionCollapseStorageKey(pageIdForStorage, section.id);
@@ -2855,7 +2858,8 @@ const VisualEditor: React.FC = () => {
         const textAreaRows = isLongLegalBodyField(section, pageContext?.id) ? 8 : 4;
         const displayTitle = getSectionDisplayTitle(section);
         const sectionHint = getSectionHint(section, pageContext?.id);
-        const iconOptions = Array.from(new Set([...ICON_PRESETS, (section.value || '').trim()].filter(Boolean)));
+        const selectedIcon = (section.value || '').trim();
+        const isKnownSelectedIcon = Boolean(selectedIcon && CORE_VALUE_ICON_COMPONENTS[selectedIcon]);
         const showSectionHint = !simpleCoreValueField;
         const showSectionOrder = !simpleCoreValueField;
         const showSectionActions = !simpleCoreValueField;
@@ -2912,9 +2916,9 @@ const VisualEditor: React.FC = () => {
                 {iconField ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(54px, 1fr))', gap: '8px' }}>
-                            {iconOptions.map((opt) => {
-                                const IconComponent = ICON_PRESET_COMPONENTS[opt] || Shield;
-                                const selected = (section.value || '') === opt;
+                            {CORE_VALUE_ICON_PRESETS.map((opt) => {
+                                const IconComponent = CORE_VALUE_ICON_COMPONENTS[opt];
+                                const selected = selectedIcon === opt;
                                 return (
                                     <button
                                         key={`${section.id}-${opt}`}
@@ -2939,9 +2943,14 @@ const VisualEditor: React.FC = () => {
                                 );
                             })}
                         </div>
+                        {selectedIcon && !isKnownSelectedIcon && (
+                            <div style={{ fontSize: '11px', color: '#b45309', fontWeight: 700 }}>
+                                Naməlum ikon kodu: {selectedIcon}. Düzgün ikon seçin.
+                            </div>
+                        )}
                         {(showAdvancedEditor || !coreValueField) && (
                             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
-                                Seçilmiş ikon: {(section.value || '').trim() || '-'}
+                                Seçilmiş ikon: {selectedIcon || '-'}
                             </div>
                         )}
                     </div>
@@ -4160,7 +4169,7 @@ const VisualEditor: React.FC = () => {
                     <main className="editor-canvas" style={{ width: '100%' }}>
                         {isGroupedTabView ? (
                             <div className="edit-fields" style={{ width: '100%' }}>
-                                {pageParam === 'home' && (
+                                {isHomeGroupedView && (
                                     <div className="canvas-header">
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
                                             <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>

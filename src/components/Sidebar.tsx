@@ -41,6 +41,12 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
     const userRole = user?.role || 'secondary';
     const location = useLocation();
+    const normalizeText = (value: string) =>
+        (value || '')
+            .toLocaleLowerCase('az')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
 
     const normalizePath = (path?: string) => {
         if (!path) return path;
@@ -116,15 +122,26 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
 
     const filterByRole = (items: SidebarItem[]): SidebarItem[] => {
         const restrictedPaths = ['/frontend-settings', '/general-settings', '/users-management'];
+        const hiddenRootPaths = new Set(['/', '/admin']);
 
         const filtered = items
             .map((item) => {
                 const children = item.children ? filterByRole(item.children) : undefined;
                 const normalizedPath = normalizePath(item.path);
+                const normalizedPathKey = (normalizedPath || '').toLowerCase();
+                const normalizedTitle = normalizeText(item.title || '');
 
                 if (userRole === 'secondary') {
                     const isRestricted = restrictedPaths.some(p => normalizedPath?.toLowerCase().startsWith(p));
                     if (isRestricted) return null;
+                }
+
+                if (
+                    hiddenRootPaths.has(normalizedPathKey) ||
+                    normalizedTitle === 'panel ana sehife' ||
+                    normalizedTitle === 'dashboard'
+                ) {
+                    return null;
                 }
 
                 // If parent has no direct path and all children are filtered out, hide it.
@@ -139,12 +156,6 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
 
     const dedupeMenuItems = (items: SidebarItem[]) => {
         const seenTitles = new Set<string>();
-        const normalizeText = (value: string) =>
-            (value || '')
-                .toLocaleLowerCase('az')
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .trim();
 
         return items.filter((item) => {
             const key = normalizeText(item.title || '');
