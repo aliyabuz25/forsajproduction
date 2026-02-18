@@ -15,11 +15,24 @@ interface NewsProps {
   onViewChange: (view: any) => void;
 }
 
-
+const SELECTED_NEWS_ID_KEY = 'forsaj_selected_news_id';
 
 const News: React.FC<NewsProps> = ({ onViewChange }) => {
   const { getText } = useSiteContent('news');
   const [newsData, setNewsData] = useState<NewsItem[]>([]);
+
+  const openNews = (id?: number) => {
+    try {
+      if (typeof id === 'number') {
+        sessionStorage.setItem(SELECTED_NEWS_ID_KEY, String(id));
+      } else {
+        sessionStorage.removeItem(SELECTED_NEWS_ID_KEY);
+      }
+    } catch {
+      // ignore storage access errors
+    }
+    onViewChange('news');
+  };
 
   useEffect(() => {
     const loadNews = async () => {
@@ -66,7 +79,7 @@ const News: React.FC<NewsProps> = ({ onViewChange }) => {
             </div>
           </div>
           <button
-            onClick={() => onViewChange('news')}
+            onClick={() => openNews()}
             className="bg-[#FF4D00] text-black font-black italic text-xs px-10 py-4 rounded-sm transform -skew-x-12 flex items-center gap-3 hover:bg-white transition-all shadow-xl hover:scale-105 active:scale-95"
           >
             <span className="transform skew-x-12 flex items-center gap-2">{getText('VIEW_ALL_BTN', 'HAMISI')} <ArrowRight className="w-5 h-5" /></span>
@@ -75,7 +88,7 @@ const News: React.FC<NewsProps> = ({ onViewChange }) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div
-            onClick={() => onViewChange('news')}
+            onClick={() => openNews(mainNews.id)}
             className="lg:col-span-7 group relative overflow-hidden bg-[#111] min-h-[450px] md:min-h-[580px] flex items-end p-10 cursor-pointer shadow-2xl rounded-sm border border-white/5"
           >
             <img
@@ -89,7 +102,7 @@ const News: React.FC<NewsProps> = ({ onViewChange }) => {
               <h3 className="text-4xl md:text-7xl font-black italic text-white leading-none tracking-tighter mb-5 uppercase">
                 {mainNews.title}
               </h3>
-              <p
+              <div
                 className="text-gray-400 font-bold italic text-xs md:text-base uppercase tracking-wide max-w-xl quill-content"
                 dangerouslySetInnerHTML={{ __html: bbcodeToHtml(mainNews.description) }}
               />
@@ -100,7 +113,7 @@ const News: React.FC<NewsProps> = ({ onViewChange }) => {
             {sideNews.map((news) => (
               <div
                 key={news.id}
-                onClick={() => onViewChange('news')}
+                onClick={() => openNews(news.id)}
                 className="group cursor-pointer flex flex-col flex-1 bg-white/5 p-6 rounded-sm border border-white/5 hover:border-[#FF4D00]/30 hover:bg-white/[0.08] transition-all shadow-sm"
               >
                 <div className="aspect-video w-full overflow-hidden bg-[#000] mb-5 rounded-sm shadow-md relative">
@@ -117,7 +130,7 @@ const News: React.FC<NewsProps> = ({ onViewChange }) => {
                   <h4 className="text-3xl font-black italic text-white uppercase leading-tight mb-2 group-hover:text-[#FF4D00] transition-colors tracking-tighter line-clamp-1">
                     {news.title}
                   </h4>
-                  <p
+                  <div
                     className="text-gray-500 text-[10px] font-bold italic uppercase tracking-wider quill-content"
                     dangerouslySetInnerHTML={{ __html: bbcodeToHtml(news.description) }}
                   />

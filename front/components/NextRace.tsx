@@ -20,6 +20,96 @@ const NextRace: React.FC<NextRaceProps> = ({ onViewChange }) => {
   const { getText, getUrl, getImage, getPage } = useSiteContent('nextrace');
   const [nextEvent, setNextEvent] = useState<Event | null>(null);
   const nextRacePage = getPage('nextrace');
+  const viewIds = new Set(['home', 'about', 'news', 'events', 'drivers', 'gallery', 'rules', 'contact', 'privacy', 'terms']);
+  const viewAliases: Record<string, string> = {
+    ana: 'home',
+    anasehife: 'home',
+    haqqimizda: 'about',
+    news: 'news',
+    xeberler: 'news',
+    tedbirler: 'events',
+    eventstab: 'events',
+    suruculer: 'drivers',
+    qalereya: 'gallery',
+    qaydalar: 'rules',
+    elaqe: 'contact',
+    privacy: 'privacy',
+    privacypolicy: 'privacy',
+    mexfiliksiyaseti: 'privacy',
+    terms: 'terms',
+    termsofservice: 'terms',
+    xidmetsertleri: 'terms'
+  };
+
+  const normalizeToken = (value: string) =>
+    (value || '')
+      .toLocaleLowerCase('az')
+      .replace(/ə/g, 'e')
+      .replace(/ı/g, 'i')
+      .replace(/ö/g, 'o')
+      .replace(/ü/g, 'u')
+      .replace(/ğ/g, 'g')
+      .replace(/ş/g, 's')
+      .replace(/ç/g, 'c')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '');
+
+  const resolveView = (raw: string): string | null => {
+    const token = normalizeToken(raw);
+    if (!token) return null;
+    if (viewIds.has(token)) return token;
+    return viewAliases[token] || null;
+  };
+
+  const resolveViewFromUrl = (rawUrl: string): string | null => {
+    try {
+      const parsed = new URL(rawUrl, window.location.origin);
+      if (parsed.origin !== window.location.origin) return null;
+
+      const candidates = [
+        parsed.pathname.replace(/^\/+|\/+$/g, ''),
+        parsed.hash.replace(/^#/, ''),
+        parsed.searchParams.get('view') || '',
+        parsed.searchParams.get('tab') || ''
+      ];
+
+      for (const candidate of candidates) {
+        const resolved = resolveView(candidate);
+        if (resolved) return resolved;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+
+  const navigateFromConfig = (rawTarget: string, fallbackView: string) => {
+    const value = (rawTarget || '').trim();
+    const fallback = resolveView(fallbackView) || fallbackView;
+
+    if (!value) {
+      onViewChange(fallback as any);
+      return;
+    }
+
+    const resolved =
+      resolveView(value) ||
+      resolveViewFromUrl(value) ||
+      resolveViewFromUrl(value.startsWith('/') ? value : `/${value}`);
+
+    if (resolved) {
+      onViewChange(resolved as any);
+      return;
+    }
+
+    if (/^https?:\/\//i.test(value)) {
+      window.open(value, '_blank');
+      return;
+    }
+
+    onViewChange(fallback as any);
+  };
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -74,12 +164,7 @@ const NextRace: React.FC<NextRaceProps> = ({ onViewChange }) => {
         </div>
         <button
           onClick={() => {
-            const id = getUrl('VIEW_ALL_BTN', 'events');
-            if (id.startsWith('http')) {
-              window.open(id, '_blank');
-            } else {
-              onViewChange(id as any);
-            }
+            navigateFromConfig(getUrl('VIEW_ALL_BTN', 'events'), 'events');
           }}
           className="bg-white/5 text-white font-black italic text-[10px] px-8 py-3 rounded-sm transform -skew-x-12 flex items-center gap-2 hover:bg-[#FF4D00] hover:text-black transition-all border border-white/5"
         >
@@ -116,12 +201,7 @@ const NextRace: React.FC<NextRaceProps> = ({ onViewChange }) => {
 
           <button
             onClick={() => {
-              const id = getUrl('REGISTER_BTN', 'events');
-              if (id.startsWith('http')) {
-                window.open(id, '_blank');
-              } else {
-                onViewChange(id as any);
-              }
+              navigateFromConfig(getUrl('REGISTER_BTN', 'events'), 'events');
             }}
             className="bg-[#FF4D00] hover:bg-white text-black font-black italic py-5 px-12 rounded-sm flex items-center gap-3 transition-all self-start transform -skew-x-12 group shadow-[0_10px_30px_rgba(255,77,0,0.2)]"
           >

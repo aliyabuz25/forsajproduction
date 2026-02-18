@@ -41,91 +41,141 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
     url
   }));
 
-  const resolveInternalView = (
-    rawValue: string,
-    fallback: 'privacy' | 'terms'
-  ): 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms' | null => {
-    const value = (rawValue || '').trim();
-    if (!value || value === '#') return fallback;
-    if (/^https?:\/\//i.test(value)) return null;
+  const viewIds = new Set(['home', 'about', 'news', 'events', 'drivers', 'rules', 'contact', 'gallery', 'privacy', 'terms']);
+  const viewMap: Record<string, 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms'> = {
+    home: 'home',
+    about: 'about',
+    news: 'news',
+    events: 'events',
+    drivers: 'drivers',
+    rules: 'rules',
+    contact: 'contact',
+    gallery: 'gallery',
+    privacy: 'privacy',
+    privacypolicy: 'privacy',
+    mexfiliksiyaseti: 'privacy',
+    terms: 'terms',
+    termsofservice: 'terms',
+    xidmetsertleri: 'terms',
+    ana: 'home',
+    anasehife: 'home',
+    haqqimizda: 'about',
+    xeberler: 'news',
+    tedbirler: 'events',
+    suruculer: 'drivers',
+    qaydalar: 'rules',
+    elaqe: 'contact',
+    qalereya: 'gallery'
+  };
 
-    const normalize = (token: string) =>
-      token
-        .toLocaleLowerCase('az')
-        .replace(/ə/g, 'e')
-        .replace(/ı/g, 'i')
-        .replace(/ö/g, 'o')
-        .replace(/ü/g, 'u')
-        .replace(/ğ/g, 'g')
-        .replace(/ş/g, 's')
-        .replace(/ç/g, 'c')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '');
+  const normalize = (token: string) =>
+    (token || '')
+      .toLocaleLowerCase('az')
+      .replace(/ə/g, 'e')
+      .replace(/ı/g, 'i')
+      .replace(/ö/g, 'o')
+      .replace(/ü/g, 'u')
+      .replace(/ğ/g, 'g')
+      .replace(/ş/g, 's')
+      .replace(/ç/g, 'c')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '');
+
+  const inferViewFromText = (value: string) => {
+    const token = normalize(value);
+    if (token.includes('anashe') || token.includes('anasif')) return 'home';
+    if (token.includes('haqqimizda')) return 'about';
+    if (token.includes('xeber') || token.includes('xber') || token.includes('xbr')) return 'news';
+    if (token.includes('tedbir') || token.includes('tdbir') || token.includes('tebdir')) return 'events';
+    if (token.includes('surucu') || token.includes('srucu') || token.includes('src')) return 'drivers';
+    if (token.includes('qalereya') || token.includes('galereya')) return 'gallery';
+    if (token.includes('qayda')) return 'rules';
+    if (token.includes('elaqe') || token.includes('laq') || token.includes('elaq')) return 'contact';
+    if (token.includes('privacy') || token.includes('mexfilik')) return 'privacy';
+    if (token.includes('terms') || token.includes('xidmetsert')) return 'terms';
+    return null;
+  };
+
+  const resolveInternalView = (rawValue: string) => {
+    const value = (rawValue || '').trim();
+    if (!value || value === '#') return null;
 
     const direct = normalize(value);
-    const directMap: Record<string, 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms'> = {
-      home: 'home',
-      about: 'about',
-      news: 'news',
-      events: 'events',
-      drivers: 'drivers',
-      rules: 'rules',
-      contact: 'contact',
-      gallery: 'gallery',
-      privacy: 'privacy',
-      privacypolicy: 'privacy',
-      mexfiliksiyaseti: 'privacy',
-      terms: 'terms',
-      termsofservice: 'terms',
-      xidmetsertleri: 'terms'
-    };
-
-    if (directMap[direct]) return directMap[direct];
+    if (viewIds.has(direct)) return direct as 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms';
+    if (viewMap[direct]) return viewMap[direct];
 
     try {
       const parsed = new URL(value, window.location.origin);
       if (parsed.origin !== window.location.origin) return null;
-      const pathToken = normalize(parsed.pathname.replace(/^\/+|\/+$/g, ''));
-      const queryView = normalize(parsed.searchParams.get('view') || '');
 
-      if (directMap[pathToken]) return directMap[pathToken];
-      if (directMap[queryView]) return directMap[queryView];
+      const candidates = [
+        normalize(parsed.pathname.replace(/^\/+|\/+$/g, '')),
+        normalize(parsed.hash.replace(/^#/, '')),
+        normalize(parsed.searchParams.get('view') || ''),
+        normalize(parsed.searchParams.get('tab') || '')
+      ];
+
+      for (const candidate of candidates) {
+        if (!candidate) continue;
+        if (viewIds.has(candidate)) return candidate as 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms';
+        if (viewMap[candidate]) return viewMap[candidate];
+      }
     } catch {
-      return fallback;
+      return null;
     }
 
-    return fallback;
+    return null;
   };
 
-  const handleLegalNavigation = (rawValue: string, fallback: 'privacy' | 'terms') => {
+  const navigateFromConfig = (
+    rawValue: string,
+    fallback: 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms',
+    fallbackText?: string
+  ) => {
     const value = (rawValue || '').trim();
+    const inferred = inferViewFromText(fallbackText || '');
+    const resolved = resolveInternalView(value) || inferred;
+
+    if (resolved) {
+      onViewChange(resolved);
+      return;
+    }
+
     if (/^https?:\/\//i.test(value)) {
       window.open(value, '_blank');
       return;
     }
-    const internalView = resolveInternalView(value, fallback);
-    if (internalView) {
-      onViewChange(internalView);
+
+    onViewChange(fallback);
+  };
+
+  const isExternalAbsoluteUrl = (rawValue?: string) => {
+    const value = (rawValue || '').trim();
+    if (!/^https?:\/\//i.test(value)) return false;
+    try {
+      return new URL(value).origin !== window.location.origin;
+    } catch {
+      return true;
     }
   };
 
 
   const navigationLinks = [
-    { name: getText('txt-ana-s-h-f-744', 'ANA SƏHİFƏ'), id: getUrl('txt-ana-s-h-f-744', 'home') as any },
-    { name: getText('txt-haqqimizda-942', 'HAQQIMIZDA'), id: getUrl('txt-haqqimizda-942', 'about') as any },
-    { name: getText('txt-x-b-rl-r-431', 'XƏBƏRLƏR'), id: getUrl('txt-x-b-rl-r-431', 'news') as any },
-    { name: getText('txt-t-dbi-rl-r-62', 'TƏDBİRLƏR'), id: getUrl('txt-t-dbi-rl-r-62', 'events') as any },
-    { name: getText('txt-s-r-c-l-r-931', 'SÜRÜCÜLƏR'), id: getUrl('txt-s-r-c-l-r-931', 'drivers') as any },
-    { name: getText('txt-qalereya-112', 'QALEREYA'), id: getUrl('txt-qalereya-112', 'gallery') as any },
-    { name: getText('txt-laq-452', 'ƏLAQƏ'), id: getUrl('txt-laq-452', 'contact') as any },
+    { name: getText('txt-ana-s-h-f-744', 'ANA SƏHİFƏ'), id: getUrl('txt-ana-s-h-f-744', 'home') as any, fallback: 'home' as const },
+    { name: getText('txt-haqqimizda-942', 'HAQQIMIZDA'), id: getUrl('txt-haqqimizda-942', 'about') as any, fallback: 'about' as const },
+    { name: getText('txt-x-b-rl-r-431', 'XƏBƏRLƏR'), id: getUrl('txt-x-b-rl-r-431', 'news') as any, fallback: 'news' as const },
+    { name: getText('txt-t-dbi-rl-r-62', 'TƏDBİRLƏR'), id: getUrl('txt-t-dbi-rl-r-62', 'events') as any, fallback: 'events' as const },
+    { name: getText('txt-s-r-c-l-r-931', 'SÜRÜCÜLƏR'), id: getUrl('txt-s-r-c-l-r-931', 'drivers') as any, fallback: 'drivers' as const },
+    { name: getText('txt-qalereya-112', 'QALEREYA'), id: getUrl('txt-qalereya-112', 'gallery') as any, fallback: 'gallery' as const },
+    { name: getText('txt-laq-452', 'ƏLAQƏ'), id: getUrl('txt-laq-452', 'contact') as any, fallback: 'contact' as const },
   ];
 
   const rulesLinks = [
-    { name: getText('txt-pi-lot-protokolu-31', 'PİLOT PROTOKOLU'), id: getUrl('txt-pi-lot-protokolu-31', 'rules') as any },
-    { name: getText('txt-texni-ki-normati-712', 'TEXNİKİ NORMATİVLƏR'), id: getUrl('txt-texni-ki-normati-712', 'rules') as any },
-    { name: getText('txt-t-hl-k-si-zli-k-q-121', 'TƏHLÜKƏSİZLİK QAYDALARI'), id: getUrl('txt-t-hl-k-si-zli-k-q-121', 'rules') as any },
-    { name: getText('txt-ekoloji-m-suli-yy-612', 'EKOLOJİ MƏSULİYYƏT'), id: getUrl('txt-ekoloji-m-suli-yy-612', 'rules') as any },
+    { name: getText('txt-pi-lot-protokolu-31', 'PİLOT PROTOKOLU'), id: getUrl('txt-pi-lot-protokolu-31', 'rules') as any, fallback: 'rules' as const },
+    { name: getText('txt-texni-ki-normati-712', 'TEXNİKİ NORMATİVLƏR'), id: getUrl('txt-texni-ki-normati-712', 'rules') as any, fallback: 'rules' as const },
+    { name: getText('txt-t-hl-k-si-zli-k-q-121', 'TƏHLÜKƏSİZLİK QAYDALARI'), id: getUrl('txt-t-hl-k-si-zli-k-q-121', 'rules') as any, fallback: 'rules' as const },
+    { name: getText('txt-ekoloji-m-suli-yy-612', 'EKOLOJİ MƏSULİYYƏT'), id: getUrl('txt-ekoloji-m-suli-yy-612', 'rules') as any, fallback: 'rules' as const },
   ];
 
   return (
@@ -201,12 +251,7 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
               <li key={link.name}>
                 <button
                   onClick={() => {
-                    const id = link.id;
-                    if (id.startsWith('http')) {
-                      window.open(id, '_blank');
-                    } else {
-                      onViewChange(id as any);
-                    }
+                    navigateFromConfig(link.id, link.fallback, link.name);
                   }}
                   className="text-gray-500 font-black italic text-[11px] uppercase hover:text-white transition-colors tracking-tight text-left"
                 >
@@ -224,12 +269,7 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
               <li key={link.name}>
                 <button
                   onClick={() => {
-                    const id = link.id;
-                    if (id.startsWith('http')) {
-                      window.open(id, '_blank');
-                    } else {
-                      onViewChange(id as any);
-                    }
+                    navigateFromConfig(link.id, link.fallback, link.name);
                   }}
                   className="text-gray-500 font-black italic text-[11px] uppercase hover:text-white transition-colors tracking-tight text-left"
                 >
@@ -265,12 +305,12 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
         <div className="flex gap-10">
           <a
             href={privacyUrl || '#'}
-            target={privacyUrl?.startsWith('http') ? '_blank' : undefined}
-            rel={privacyUrl?.startsWith('http') ? 'noopener noreferrer' : undefined}
+            target={isExternalAbsoluteUrl(privacyUrl) ? '_blank' : undefined}
+            rel={isExternalAbsoluteUrl(privacyUrl) ? 'noopener noreferrer' : undefined}
             onClick={(e) => {
-              if (!privacyUrl?.startsWith('http')) {
+              if (!isExternalAbsoluteUrl(privacyUrl)) {
                 e.preventDefault();
-                handleLegalNavigation(privacyUrl, 'privacy');
+                navigateFromConfig(privacyUrl, 'privacy', privacyLabel);
               }
             }}
             className="text-gray-600 font-black italic text-[9px] uppercase tracking-widest hover:text-[#FF4D00] transition-colors"
@@ -279,12 +319,12 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
           </a>
           <a
             href={termsUrl || '#'}
-            target={termsUrl?.startsWith('http') ? '_blank' : undefined}
-            rel={termsUrl?.startsWith('http') ? 'noopener noreferrer' : undefined}
+            target={isExternalAbsoluteUrl(termsUrl) ? '_blank' : undefined}
+            rel={isExternalAbsoluteUrl(termsUrl) ? 'noopener noreferrer' : undefined}
             onClick={(e) => {
-              if (!termsUrl?.startsWith('http')) {
+              if (!isExternalAbsoluteUrl(termsUrl)) {
                 e.preventDefault();
-                handleLegalNavigation(termsUrl, 'terms');
+                navigateFromConfig(termsUrl, 'terms', termsLabel);
               }
             }}
             className="text-gray-600 font-black italic text-[9px] uppercase tracking-widest hover:text-[#FF4D00] transition-colors"

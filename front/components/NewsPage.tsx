@@ -12,7 +12,7 @@ interface NewsItem {
   content: string;
 }
 
-
+const SELECTED_NEWS_ID_KEY = 'forsaj_selected_news_id';
 
 const NewsPage: React.FC = () => {
   const { getText } = useSiteContent('newspage');
@@ -42,6 +42,22 @@ const NewsPage: React.FC = () => {
             content: item.description
           }));
           setNewsData(mapped);
+
+          try {
+            const rawRequestedId = sessionStorage.getItem(SELECTED_NEWS_ID_KEY);
+            if (rawRequestedId) {
+              const requestedId = Number(rawRequestedId);
+              if (Number.isFinite(requestedId)) {
+                const requestedNews = mapped.find((item: NewsItem) => item.id === requestedId);
+                if (requestedNews) {
+                  setSelectedNews(requestedNews);
+                }
+              }
+            }
+            sessionStorage.removeItem(SELECTED_NEWS_ID_KEY);
+          } catch {
+            // ignore storage access errors
+          }
         }
       } catch (err) {
         console.error('Failed to load news from API', err);
