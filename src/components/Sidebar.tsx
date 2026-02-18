@@ -24,7 +24,6 @@ import {
     Inbox,
     Settings,
     Globe,
-    Circle,
     Hexagon,
     LogOut
 } from 'lucide-react';
@@ -69,7 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
 
     const IconComponent = ({ name, className }: { name: string; className?: string }) => {
         const Icon = iconMap[name];
-        if (!Icon) return <Circle className={className} size={18} />;
+        if (!Icon) return <Layout className={className} size={18} />;
         return <Icon className={className} size={18} />;
     };
 
@@ -82,11 +81,11 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
         return location.pathname === path;
     };
 
-    const renderLinkItem = (item: SidebarItem, parentIcon?: string) => (
+    const renderLinkItem = (item: SidebarItem, parentIcon?: string, forcedPath?: string) => (
         <li key={item.title} className="sidebar-item">
             <NavLink
-                to={item.path || '#'}
-                className={() => `sidebar-link ${isCurrentActive(item.path) ? 'active' : ''}`}
+                to={forcedPath || item.path || '#'}
+                className={() => `sidebar-link ${isCurrentActive(forcedPath || item.path) ? 'active' : ''}`}
             >
                 {(item.icon || parentIcon) && <IconComponent name={item.icon || parentIcon || ''} className="sidebar-icon" />}
                 <span className="sidebar-text">{item.title}</span>
@@ -133,11 +132,9 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
             <div className="sidebar-content">
                 <div className="sidebar-section-label">ƏSAS NAVİQASİYA</div>
                 <ul className="sidebar-menu">
-                    {filterByRole(menuItems).flatMap(item => {
-                        if (item.children && item.children.length > 0) {
-                            return item.children.map(child => renderLinkItem(child, item.icon));
-                        }
-                        return renderLinkItem(item);
+                    {filterByRole(menuItems).map(item => {
+                        const fallbackChildPath = item.children?.find(child => !!child.path)?.path;
+                        return renderLinkItem(item, item.icon, item.path || fallbackChildPath);
                     })}
                     {menuItems.length === 0 && (
                         <div className="empty-sidebar-msg">
