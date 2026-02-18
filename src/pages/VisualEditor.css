@@ -91,6 +91,31 @@
     align-items: center;
 }
 
+.editor-mode-toggle {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 0.45rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.editor-mode-toggle:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+
+.editor-mode-toggle.active {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f8fafc;
+}
+
 .mode-switcher {
     display: flex;
     gap: 4px;
@@ -118,6 +143,14 @@
     background: white;
     color: var(--premium-primary);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.editor-view-note {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+    line-height: 1.35;
+    padding: 0.1rem 0.1rem 0;
 }
 
 .sync-btn-compact {
@@ -583,6 +616,35 @@
 .field-item-wrapper textarea {
     width: 100%;
     margin-bottom: 0px !important;
+}
+
+.section-title-readonly {
+    font-size: 0.86rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.section-meta-hint {
+    font-size: 0.72rem;
+    color: #64748b;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.section-technical-id {
+    font-size: 0.67rem;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.page-help-note {
+    margin: 0;
+    font-size: 0.74rem;
+    color: #64748b;
+    font-weight: 600;
+    line-height: 1.35;
 }
 
 .section-hide-toggle {

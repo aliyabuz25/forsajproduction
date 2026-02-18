@@ -194,6 +194,36 @@ const LEGAL_SECTION_GROUPS: Record<string, Array<{ title: string; subtitle: stri
     ]
 };
 
+const PAGE_EDIT_HINTS: Record<string, string> = {
+    navbar: 'Üst menudakı düymə adları və keçidlərini buradan yeniləyin.',
+    hero: 'Ana səhifənin ilk ekranında görünən başlıq, alt başlıq və düymələr.',
+    marquee: 'Ana səhifədə sürüşən məlumat zolağının məzmunu.',
+    categoryleaders: 'Ana səhifə liderlər bölməsi başlıq və məlumatları.',
+    partners: 'Ana səhifənin alt hissəsindəki "RƏSMİ TƏRƏFDAŞLARIMIZ" kartları.',
+    footer: 'Saytın alt hissəsi (footer) mətnləri, linkləri və əlaqə məlumatları.',
+    about: 'Haqqımızda səhifəsindəki əsas başlıqlar, mətnlər və dəyərlər.',
+    newspage: 'Xəbərlər səhifəsi başlıq və üst mətn sahələri.',
+    eventspage: 'Tədbirlər səhifəsi başlıq və forma ilə bağlı mətnlər.',
+    drivers: 'Sürücülər bölməsinin kateqoriya və cədvəl başlıqları.',
+    gallerypage: 'Qalereya səhifəsi tab və başlıq məzmunları.',
+    contactpage: 'Əlaqə səhifəsində ofis, departament və form mətnləri.',
+    rulespage: 'Qaydalar səhifəsi tablar, sənəd düymələri və maddələr.',
+    privacypolicypage: 'Privacy Policy səhifəsində başlıq, maddələr və əlaqə məlumatları.',
+    termsofservicepage: 'Terms of Service səhifəsində başlıq, maddələr və əlaqə məlumatları.',
+};
+
+const FIELD_HINTS: Record<string, string> = {
+    PAGE_TITLE: 'Səhifənin ən üstündə görünən əsas başlıq.',
+    PAGE_SUBTITLE: 'Başlığın altında görünən qısa izah mətni.',
+    SECTION_TITLE: 'Bu blokun üstündə görünən etiket mətnidir.',
+    INTRO_TEXT: 'Səhifə girişində görünən giriş mətni.',
+    UPDATED_LABEL: 'Yenilənmə tarixindən əvvəl görünən etiket.',
+    UPDATED_DATE: 'Səhifədə göstərilən son yenilənmə tarixi.',
+    CONTACT_TITLE: 'Səhifə sonundakı əlaqə bölməsi başlığı.',
+    CONTACT_EMAIL: 'Səhifə sonundakı e-mail ünvanı.',
+    CONTACT_WEBSITE: 'Səhifə sonundakı veb sayt linki.',
+};
+
 const bbcodeToHtmlForEditor = (raw: string) => {
     if (!raw) return '';
 
@@ -351,6 +381,41 @@ const shouldSkipSectionInEditor = (section: Section) => {
     return false;
 };
 
+const getPageEditHint = (pageId?: string) => {
+    if (!pageId) return '';
+    return PAGE_EDIT_HINTS[pageId] || '';
+};
+
+const getSectionDisplayTitle = (section: Section) => {
+    const label = normalizePlainText(section.label || '');
+    if (label && !looksLikeKeyToken(label)) return label;
+
+    const key = extractSectionKey(section);
+    if (key) return humanizeKey(key);
+
+    if (label) return humanizeKey(label);
+    return humanizeKey((section.id || '').replace(/-/g, ' '));
+};
+
+const getSectionHint = (section: Section, pageId?: string) => {
+    const key = extractSectionKey(section) || section.id;
+    const normalizedKey = (key || '').trim();
+    if (FIELD_HINTS[normalizedKey]) return FIELD_HINTS[normalizedKey];
+
+    const sectionTitleMatch = normalizedKey.match(/^SECTION_(\d+)_TITLE$/);
+    if (sectionTitleMatch) return `${sectionTitleMatch[1]}. maddənin başlıq mətni.`;
+    const sectionBodyMatch = normalizedKey.match(/^SECTION_(\d+)_BODY$/);
+    if (sectionBodyMatch) return `${sectionBodyMatch[1]}. maddənin izah mətni.`;
+
+    if (pageId === 'partners' && /^PARTNER_\d+_NAME$/.test(normalizedKey)) return 'Partner kartında görünən ad.';
+    if (pageId === 'partners' && /^PARTNER_\d+_TAG$/.test(normalizedKey)) return 'Partner kartında hover zamanı görünən etiket.';
+    if (pageId === 'partners' && /^PARTNER_\d+_ICON$/.test(normalizedKey)) return 'Partner kartında istifadə olunan ikon adı.';
+    if (pageId === 'partners' && /^PARTNER_\d+_USE_IMAGE$/.test(normalizedKey)) return 'Kartın ikon yoxsa görsəl ilə göstərilməsini təyin edir.';
+    if (pageId === 'partners' && /^PARTNER_\d+_IMAGE_ID$/.test(normalizedKey)) return 'Bu partner üçün bağlı şəkil ID-si.';
+
+    return 'Bu mətn saytda olduğu kimi göstərilir.';
+};
+
 const PARTNER_KEY_REGEX = /^PARTNER_(\d+)_(NAME|TAG|ICON|USE_IMAGE|IMAGE_ID)$/;
 const RULE_TAB_FIELD_REGEX = /^RULE_TAB_(\d+)_(ID|TITLE|ICON|DOC_NAME|DOC_BUTTON|DOC_URL)$/;
 const RULE_TAB_ITEM_FIELD_REGEX = /^RULE_TAB_(\d+)_ITEM_(\d+)_(TITLE|DESC)$/;
@@ -453,6 +518,7 @@ const resolvePageGroup = (pageParam?: string | null) => {
 const CONTENT_VERSION_KEY = 'forsaj_site_content_version';
 const GROUPED_PAGE_COLLAPSE_KEY = 'forsaj_grouped_page_collapsed_v1';
 const SECTION_COLLAPSE_KEY = 'forsaj_section_collapsed_v1';
+const ADVANCED_EDITOR_MODE_KEY = 'forsaj_editor_advanced_mode_v1';
 const normalizeOrder = (value: number | undefined, fallback: number) =>
     Number.isFinite(value as number) ? (value as number) : fallback;
 
@@ -470,6 +536,15 @@ const VisualEditor: React.FC = () => {
     const [activeImageField, setActiveImageField] = useState<{ pageIdx: number, imgId: string } | null>(null);
     const [newSectionTitle, setNewSectionTitle] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [showAdvancedEditor, setShowAdvancedEditor] = useState<boolean>(() => {
+        try {
+            const raw = localStorage.getItem(ADVANCED_EDITOR_MODE_KEY);
+            if (!raw) return false;
+            return raw === '1' || raw === 'true';
+        } catch {
+            return false;
+        }
+    });
     const [groupedPageCollapsed, setGroupedPageCollapsed] = useState<Record<string, boolean>>(() => {
         try {
             const raw = localStorage.getItem(GROUPED_PAGE_COLLAPSE_KEY);
@@ -532,6 +607,9 @@ const VisualEditor: React.FC = () => {
     useEffect(() => {
         localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(sectionCollapsed));
     }, [sectionCollapsed]);
+    useEffect(() => {
+        localStorage.setItem(ADVANCED_EDITOR_MODE_KEY, showAdvancedEditor ? '1' : '0');
+    }, [showAdvancedEditor]);
     const [driverCategories, setDriverCategories] = useState<DriverCategory[]>([]);
     const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
     const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
@@ -2661,38 +2739,53 @@ const VisualEditor: React.FC = () => {
         const pageIdForStorage = pageContext?.id || currentPage?.id || 'unknown';
         const collapseStorageKey = getSectionCollapseStorageKey(pageIdForStorage, section.id);
         const isCollapsed = Boolean(sectionCollapsed[collapseStorageKey]);
+        const effectiveCollapsed = showAdvancedEditor ? isCollapsed : false;
         const textAreaRows = isLongLegalBodyField(section, pageContext?.id) ? 8 : 4;
+        const displayTitle = getSectionDisplayTitle(section);
+        const sectionHint = getSectionHint(section, pageContext?.id);
 
         return (
             <div key={`${section.id}-${visibleIndex}`} className="field-item-wrapper" style={{ background: editable ? '#fcfcfd' : '#f8fafc', padding: '1.25rem', borderRadius: '14px', border: editable ? '1px solid #e5e7eb' : '1px dashed #cbd5e1' }}>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-                    <input
-                        type="text"
-                        value={looksLikeKeyToken(section.label) ? humanizeKey(section.label) : section.label}
-                        onChange={(e) => handleSectionChange(pageIdx, section.id, 'label', e.target.value)}
-                        disabled={!editableLabel}
-                        style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', border: 'none', background: 'none', width: 'auto', padding: 0 }}
-                    />
-                    {key && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 260, flex: 1 }}>
+                        {showAdvancedEditor ? (
+                            <input
+                                type="text"
+                                value={looksLikeKeyToken(section.label) ? humanizeKey(section.label) : section.label}
+                                onChange={(e) => handleSectionChange(pageIdx, section.id, 'label', e.target.value)}
+                                disabled={!editableLabel}
+                                style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary)', border: 'none', background: 'none', width: 'auto', padding: 0 }}
+                            />
+                        ) : (
+                            <div className="section-title-readonly">{displayTitle}</div>
+                        )}
+                        <div className="section-meta-hint">{sectionHint}</div>
+                        {showAdvancedEditor && (
+                            <div className="section-technical-id">ID: {section.id}</div>
+                        )}
+                    </div>
+                    {showAdvancedEditor && key && (
                         <span style={{ fontSize: '10px', color: '#475569', background: '#f1f5f9', borderRadius: '999px', padding: '3px 8px', fontWeight: 700 }}>
                             Açar mətn
                         </span>
                     )}
-                    <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, marginLeft: 'auto' }}>
+                    <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, marginLeft: showAdvancedEditor ? '0' : 'auto' }}>
                         Sıra: {visibleIndex + 1}
                     </span>
-                    <label className="section-hide-toggle">
-                        <input
-                            type="checkbox"
-                            checked={isCollapsed}
-                            onChange={(e) => {
-                                setSectionCollapsed((prev) => ({ ...prev, [collapseStorageKey]: e.target.checked }));
-                            }}
-                        />
-                        <span>Paneldə gizlə</span>
-                    </label>
+                    {showAdvancedEditor && (
+                        <label className="section-hide-toggle">
+                            <input
+                                type="checkbox"
+                                checked={isCollapsed}
+                                onChange={(e) => {
+                                    setSectionCollapsed((prev) => ({ ...prev, [collapseStorageKey]: e.target.checked }));
+                                }}
+                            />
+                            <span>Paneldə gizlə</span>
+                        </label>
+                    )}
                 </div>
-                {isCollapsed ? (
+                {effectiveCollapsed ? (
                     <div className="section-collapsed-tip">
                         Bu section paneldə gizlidir. Yenidən göstərmək üçün “Paneldə gizlə” seçimini söndürün.
                     </div>
@@ -2758,30 +2851,34 @@ const VisualEditor: React.FC = () => {
                             <Globe size={12} /> Link əlavə et
                         </button>
                     )}
-                    <button
-                        title="Yuxarı daşı"
-                        onClick={() => moveField('text', section.id, 'up', pageIdx)}
-                        disabled={!canMoveUp}
-                        style={{ background: '#fff', border: '1px solid #e2e8f0', color: canMoveUp ? '#334155' : '#cbd5e1', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: canMoveUp ? 'pointer' : 'not-allowed', fontSize: '12px' }}
-                    >
-                        <ChevronUp size={12} /> Yuxarı
-                    </button>
-                    <button
-                        title="Aşağı daşı"
-                        onClick={() => moveField('text', section.id, 'down', pageIdx)}
-                        disabled={!canMoveDown}
-                        style={{ background: '#fff', border: '1px solid #e2e8f0', color: canMoveDown ? '#334155' : '#cbd5e1', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: canMoveDown ? 'pointer' : 'not-allowed', fontSize: '12px' }}
-                    >
-                        <ChevronDown size={12} /> Aşağı
-                    </button>
-                    {deletable && (
-                        <button
-                            className="field-delete-btn"
-                            onClick={() => removeField('text', section.id, pageIdx)}
-                            style={{ background: '#fff', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '12px' }}
-                        >
-                            <Trash2 size={12} /> Sil
-                        </button>
+                    {showAdvancedEditor && (
+                        <>
+                            <button
+                                title="Yuxarı daşı"
+                                onClick={() => moveField('text', section.id, 'up', pageIdx)}
+                                disabled={!canMoveUp}
+                                style={{ background: '#fff', border: '1px solid #e2e8f0', color: canMoveUp ? '#334155' : '#cbd5e1', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: canMoveUp ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                            >
+                                <ChevronUp size={12} /> Yuxarı
+                            </button>
+                            <button
+                                title="Aşağı daşı"
+                                onClick={() => moveField('text', section.id, 'down', pageIdx)}
+                                disabled={!canMoveDown}
+                                style={{ background: '#fff', border: '1px solid #e2e8f0', color: canMoveDown ? '#334155' : '#cbd5e1', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: canMoveDown ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                            >
+                                <ChevronDown size={12} /> Aşağı
+                            </button>
+                            {deletable && (
+                                <button
+                                    className="field-delete-btn"
+                                    onClick={() => removeField('text', section.id, pageIdx)}
+                                    style={{ background: '#fff', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '12px' }}
+                                >
+                                    <Trash2 size={12} /> Sil
+                                </button>
+                            )}
+                        </>
                     )}
                 </div>
                     </>
@@ -2857,6 +2954,16 @@ const VisualEditor: React.FC = () => {
                     </div>
 
                     <div className="header-actions">
+                        {editorMode === 'extract' && (
+                            <button
+                                type="button"
+                                className={`editor-mode-toggle ${showAdvancedEditor ? 'active' : ''}`}
+                                onClick={() => setShowAdvancedEditor((prev) => !prev)}
+                                title={showAdvancedEditor ? 'Sadə görünüşə keç' : 'Geniş görünüşə keç'}
+                            >
+                                {showAdvancedEditor ? 'Geniş Rejim' : 'Sadə Rejim'}
+                            </button>
+                        )}
                         <button
                             className={`save-btn ${isSaving ? 'saving' : ''}`}
                             onClick={saveChanges}
@@ -2905,6 +3012,13 @@ const VisualEditor: React.FC = () => {
                         Fotolar
                     </button>
                 </div>
+                {editorMode === 'extract' && (
+                    <div className="editor-view-note">
+                        {showAdvancedEditor
+                            ? 'Geniş rejim aktivdir: texniki ID, sıralama, silmə və gizlətmə alətləri görünür.'
+                            : 'Sadə rejim aktivdir: yalnız əsas mətn və şəkil sahələri göstərilir.'}
+                    </div>
+                )}
             </div>
 
             {editorMode === 'news' ? (
@@ -3750,9 +3864,14 @@ const VisualEditor: React.FC = () => {
                                     return (
                                         <div key={page.id} className="field-group">
                                             <div className="canvas-header">
-                                                <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                                                    {componentLabels[page.id] || page.title}
-                                                </h2>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                                                        {componentLabels[page.id] || page.title}
+                                                    </h2>
+                                                    {getPageEditHint(page.id) && (
+                                                        <p className="page-help-note">{getPageEditHint(page.id)}</p>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             {isMarqueePage && (
@@ -4128,9 +4247,14 @@ const VisualEditor: React.FC = () => {
                         ) : currentPage ? (
                             <>
                                 <div className="canvas-header">
-                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                                        {componentLabels[currentPage.id] || currentPage.title}
-                                    </h2>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                                            {componentLabels[currentPage.id] || currentPage.title}
+                                        </h2>
+                                        {getPageEditHint(currentPage.id) && (
+                                            <p className="page-help-note">{getPageEditHint(currentPage.id)}</p>
+                                        )}
+                                    </div>
                                     <div className="canvas-actions">
                                         {currentPage.id === 'about' && (
                                             <button className="add-field-minimal" onClick={() => addAboutStatRow()} style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe' }}>
@@ -4471,9 +4595,11 @@ const VisualEditor: React.FC = () => {
                                     <div className="field-group">
                                         <div className="field-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <label><Type size={16} /> Mətn Sahələri</label>
-                                            <button className="add-field-minimal" onClick={() => addField('text')}>
-                                                <Plus size={14} /> Mətn Əlavə Et
-                                            </button>
+                                            {showAdvancedEditor && (
+                                                <button className="add-field-minimal" onClick={() => addField('text')}>
+                                                    <Plus size={14} /> Mətn Əlavə Et
+                                                </button>
+                                            )}
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                             {displayedSections.length === 0 && searchTerm ? (
@@ -4540,7 +4666,7 @@ const VisualEditor: React.FC = () => {
                                                                 )}
                                                             </div>
                                                             <div style={{ padding: '6px 8px', fontSize: '10px', color: '#475569', fontWeight: 700 }}>
-                                                                #{idx + 1} • {img.id}
+                                                                #{idx + 1}{showAdvancedEditor ? ` • ${img.id}` : ''}
                                                             </div>
                                                         </div>
                                                     ))}
@@ -4556,31 +4682,35 @@ const VisualEditor: React.FC = () => {
                                                     const canMoveDown = realIndex >= 0 && realIndex < realImages.length - 1;
                                                     return (
                                                     <div key={img.id} className="image-edit-card" style={{ border: '1px solid #eee', borderRadius: '12px', overflow: 'hidden', background: '#fff', position: 'relative' }}>
-                                                        <button
-                                                            className="field-delete-btn"
-                                                            onClick={() => removeField('image', img.id)}
-                                                            style={{ position: 'absolute', right: '8px', top: '8px', zIndex: 10, background: 'rgba(255,255,255,0.9)', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
-                                                        <div style={{ position: 'absolute', right: '40px', top: '8px', zIndex: 10, display: 'flex', gap: '6px' }}>
-                                                            <button
-                                                                title="Yuxarı daşı"
-                                                                onClick={() => moveField('image', img.id, 'up')}
-                                                                disabled={!canMoveUp}
-                                                                style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', color: canMoveUp ? '#334155' : '#cbd5e1', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canMoveUp ? 'pointer' : 'not-allowed' }}
-                                                            >
-                                                                <ChevronUp size={12} />
-                                                            </button>
-                                                            <button
-                                                                title="Aşağı daşı"
-                                                                onClick={() => moveField('image', img.id, 'down')}
-                                                                disabled={!canMoveDown}
-                                                                style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', color: canMoveDown ? '#334155' : '#cbd5e1', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canMoveDown ? 'pointer' : 'not-allowed' }}
-                                                            >
-                                                                <ChevronDown size={12} />
-                                                            </button>
-                                                        </div>
+                                                        {showAdvancedEditor && (
+                                                            <>
+                                                                <button
+                                                                    className="field-delete-btn"
+                                                                    onClick={() => removeField('image', img.id)}
+                                                                    style={{ position: 'absolute', right: '8px', top: '8px', zIndex: 10, background: 'rgba(255,255,255,0.9)', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                                                >
+                                                                    <Trash2 size={12} />
+                                                                </button>
+                                                                <div style={{ position: 'absolute', right: '40px', top: '8px', zIndex: 10, display: 'flex', gap: '6px' }}>
+                                                                    <button
+                                                                        title="Yuxarı daşı"
+                                                                        onClick={() => moveField('image', img.id, 'up')}
+                                                                        disabled={!canMoveUp}
+                                                                        style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', color: canMoveUp ? '#334155' : '#cbd5e1', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canMoveUp ? 'pointer' : 'not-allowed' }}
+                                                                    >
+                                                                        <ChevronUp size={12} />
+                                                                    </button>
+                                                                    <button
+                                                                        title="Aşağı daşı"
+                                                                        onClick={() => moveField('image', img.id, 'down')}
+                                                                        disabled={!canMoveDown}
+                                                                        style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', color: canMoveDown ? '#334155' : '#cbd5e1', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canMoveDown ? 'pointer' : 'not-allowed' }}
+                                                                    >
+                                                                        <ChevronDown size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            </>
+                                                        )}
                                                         <div style={{ height: '120px', background: '#f8fafc', position: 'relative', overflow: 'hidden' }}>
                                                             {img.path && (img.path.startsWith('http') || img.path.startsWith('/')) ? (
                                                                 <img src={img.path} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
