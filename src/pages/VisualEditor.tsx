@@ -2750,7 +2750,7 @@ const VisualEditor: React.FC = () => {
         if (!isSectionVisibleInAdmin(s)) return false;
         if (shouldSkipSectionInEditor(s)) return false;
         if (currentPage?.id === 'about' && isStatSectionId(s.id)) return false;
-        if (currentPage?.id === 'partners' && (PARTNER_KEY_REGEX.test(s.id) || s.id === 'SECTION_TITLE')) return false;
+        if (currentPage?.id === 'partners') return false;
         if (currentPage?.id === 'rulespage' && RULE_TAB_SECTION_REGEX.test(s.id)) return false;
         if (currentPage?.id === 'rulespage' && s.id.startsWith('RULES_')) return false;
         return matchesSearch(s.id, s.label, s.value, s.url);
@@ -3039,6 +3039,7 @@ const VisualEditor: React.FC = () => {
                         <Plus size={14} /> Tərəfdaş Əlavə Et
                     </button>
                 </div>
+
                 <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '6px', fontWeight: 700 }}>Bölmə Başlığı</label>
                     <input
@@ -3049,9 +3050,9 @@ const VisualEditor: React.FC = () => {
                     />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '10px' }}>
                     {rows.length === 0 ? (
-                        <div style={{ padding: '1rem', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#64748b', fontSize: '13px' }}>
+                        <div style={{ gridColumn: '1/-1', padding: '1rem', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#64748b', fontSize: '13px' }}>
                             {searchTerm ? 'Axtarışa uyğun tərəfdaş tapılmadı.' : 'Hələ tərəfdaş kartı yoxdur. "Tərəfdaş Əlavə Et" ilə başlayın.'}
                         </div>
                     ) : rows.map((row, idx) => {
@@ -3062,172 +3063,163 @@ const VisualEditor: React.FC = () => {
                         const useImage = ['1', 'true', 'yes', 'on'].includes((row.useImage || '').toLowerCase());
 
                         return (
-                            <div key={`${pageIdx}-${row.index}`} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', background: '#fff' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
-                                    <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800 }}>
-                                        {row.index}
+                            <div key={`${pageIdx}-${row.index}`} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px', background: '#fff', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800 }}>
+                                        {idx + 1}
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                        <input
-                                            type="text"
-                                            value={row.name}
-                                            onChange={(e) => updatePartnerRowField(row.index, 'name', e.target.value, pageIdx)}
-                                            placeholder="Tərəfdaş adı"
-                                            style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}
-                                        />
-                                        <input
-                                            type="text"
-                                            value={row.tag}
-                                            onChange={(e) => updatePartnerRowField(row.index, 'tag', e.target.value, pageIdx)}
-                                            placeholder="Etiket (Məs: OFFICIAL PARTNER)"
-                                            style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                                        />
+                                    <input
+                                        type="text"
+                                        value={row.name}
+                                        onChange={(e) => updatePartnerRowField(row.index, 'name', e.target.value, pageIdx)}
+                                        placeholder="Tərəfdaş adı"
+                                        style={{ flex: 1, padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 700 }}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: '10px', alignItems: 'start' }}>
+                                    <div style={{ width: '72px', height: '72px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                                        {useImage ? (
+                                            imageAsset?.path ? <img src={imageAsset.path} alt={imageAsset.alt || row.name || `Partner ${row.index}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <ImageIcon size={18} />
+                                        ) : renderPartnerIconPreview(row.icon || 'ShieldCheck', 18)}
                                     </div>
-                                    <div style={{ display: 'flex', gap: '6px' }}>
-                                        <button
-                                            title="Yuxarı"
-                                            onClick={() => movePartnerRow(row.index, 'up', pageIdx)}
-                                            disabled={!canMoveUp}
-                                            style={{ width: '30px', height: '30px', border: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px', color: canMoveUp ? '#334155' : '#cbd5e1' }}
-                                        >
-                                            <ChevronUp size={14} />
-                                        </button>
-                                        <button
-                                            title="Aşağı"
-                                            onClick={() => movePartnerRow(row.index, 'down', pageIdx)}
-                                            disabled={!canMoveDown}
-                                            style={{ width: '30px', height: '30px', border: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px', color: canMoveDown ? '#334155' : '#cbd5e1' }}
-                                        >
-                                            <ChevronDown size={14} />
-                                        </button>
-                                        <button
-                                            title="Sil"
-                                            onClick={() => removePartnerRow(row.index, pageIdx)}
-                                            style={{ width: '30px', height: '30px', border: '1px solid #fee2e2', background: '#fff', borderRadius: '8px', color: '#ef4444' }}
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => updatePartnerRowField(row.index, 'useImage', 'false', pageIdx)}
+                                                style={{
+                                                    padding: '7px 10px',
+                                                    borderRadius: '8px',
+                                                    border: !useImage ? '1px solid #fb923c' : '1px solid #e2e8f0',
+                                                    background: !useImage ? '#fff7ed' : '#fff',
+                                                    color: !useImage ? '#c2410c' : '#334155',
+                                                    fontSize: '12px',
+                                                    fontWeight: 700
+                                                }}
+                                            >
+                                                İkon
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    updatePartnerRowField(row.index, 'useImage', 'true', pageIdx);
+                                                    ensurePartnerImageSlot(row, pageIdx);
+                                                }}
+                                                style={{
+                                                    padding: '7px 10px',
+                                                    borderRadius: '8px',
+                                                    border: useImage ? '1px solid #fb923c' : '1px solid #e2e8f0',
+                                                    background: useImage ? '#fff7ed' : '#fff',
+                                                    color: useImage ? '#c2410c' : '#334155',
+                                                    fontSize: '12px',
+                                                    fontWeight: 700
+                                                }}
+                                            >
+                                                Görsəl
+                                            </button>
+                                        </div>
+
+                                        {!useImage ? (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                {PARTNER_ICON_PRESETS.map((iconToken) => {
+                                                    const isActive = (row.icon || '').toLowerCase() === iconToken.toLowerCase();
+                                                    return (
+                                                        <button
+                                                            key={`${row.index}-${iconToken}`}
+                                                            type="button"
+                                                            onClick={() => updatePartnerRowField(row.index, 'icon', iconToken, pageIdx)}
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '6px',
+                                                                padding: '7px 10px',
+                                                                borderRadius: '8px',
+                                                                border: isActive ? '1px solid #fb923c' : '1px solid #e2e8f0',
+                                                                background: isActive ? '#fff7ed' : '#fff',
+                                                                color: isActive ? '#c2410c' : '#334155',
+                                                                fontSize: '12px',
+                                                                fontWeight: 700
+                                                            }}
+                                                        >
+                                                            {renderPartnerIconPreview(iconToken, 14)}
+                                                            {iconToken}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '6px' }}>
+                                                <input
+                                                    type="text"
+                                                    value={imageAsset?.path || ''}
+                                                    onChange={(e) => updatePartnerImageAsset(row, { path: e.target.value }, pageIdx)}
+                                                    placeholder="Görsel URL / yol"
+                                                    style={{ padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                                />
+                                                <input
+                                                    id={`partner-upload-${pageIdx}-${row.index}`}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    style={{ display: 'none' }}
+                                                    onChange={async (e) => {
+                                                        const f = e.target.files?.[0];
+                                                        if (!f) return;
+                                                        const url = await uploadImage(f);
+                                                        if (url) updatePartnerImageAsset(row, { path: url }, pageIdx);
+                                                        e.target.value = '';
+                                                    }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn-secondary"
+                                                    style={{ padding: '8px 10px', fontSize: '12px' }}
+                                                    onClick={() => document.getElementById(`partner-upload-${pageIdx}-${row.index}`)?.click()}
+                                                >
+                                                    Yüklə
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn-secondary"
+                                                    style={{ padding: '8px 10px', fontSize: '12px' }}
+                                                    onClick={() => {
+                                                        const ensured = ensurePartnerImageSlot(row, pageIdx);
+                                                        if (!ensured) return;
+                                                        openImageSelector(pageIdx, ensured);
+                                                    }}
+                                                >
+                                                    Kitabxana
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', gap: '8px', alignItems: 'start' }}>
-                                    <select
-                                        value={row.useImage}
-                                        onChange={(e) => updatePartnerRowField(row.index, 'useImage', e.target.value, pageIdx)}
-                                        style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}
+                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '2px' }}>
+                                    <button
+                                        title="Yuxarı"
+                                        onClick={() => movePartnerRow(row.index, 'up', pageIdx)}
+                                        disabled={!canMoveUp}
+                                        style={{ width: '30px', height: '30px', border: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px', color: canMoveUp ? '#334155' : '#cbd5e1' }}
                                     >
-                                        <option value="false">İkon ilə göstər</option>
-                                        <option value="true">Görsel ilə göstər</option>
-                                    </select>
-
-                                    {!useImage ? (
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                            {PARTNER_ICON_PRESETS.map((iconToken) => {
-                                                const isActive = (row.icon || '').toLowerCase() === iconToken.toLowerCase();
-                                                return (
-                                                    <button
-                                                        key={`${row.index}-${iconToken}`}
-                                                        type="button"
-                                                        onClick={() => updatePartnerRowField(row.index, 'icon', iconToken, pageIdx)}
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            gap: '6px',
-                                                            padding: '7px 10px',
-                                                            borderRadius: '8px',
-                                                            border: isActive ? '1px solid #fb923c' : '1px solid #e2e8f0',
-                                                            background: isActive ? '#fff7ed' : '#fff',
-                                                            color: isActive ? '#c2410c' : '#334155',
-                                                            fontSize: '12px',
-                                                            fontWeight: 700
-                                                        }}
-                                                    >
-                                                        {renderPartnerIconPreview(iconToken, 14)}
-                                                        {iconToken}
-                                                    </button>
-                                                );
-                                            })}
-                                            {showAdvancedEditor && (
-                                                <input
-                                                    type="text"
-                                                    value={row.icon}
-                                                    onChange={(e) => updatePartnerRowField(row.index, 'icon', e.target.value, pageIdx)}
-                                                    placeholder="Custom icon token"
-                                                    style={{ minWidth: '190px', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                                                />
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: '8px' }}>
-                                            <div style={{ width: '72px', height: '72px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                {imageAsset?.path ? (
-                                                    <img src={imageAsset.path} alt={imageAsset.alt || row.name || `Partner ${row.index}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                ) : (
-                                                    <ImageIcon size={20} style={{ opacity: 0.25 }} />
-                                                )}
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <div style={{ display: 'grid', gridTemplateColumns: showAdvancedEditor ? '1fr 1fr auto auto' : '1fr auto auto', gap: '6px' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={imageAsset?.path || ''}
-                                                        onChange={(e) => updatePartnerImageAsset(row, { path: e.target.value }, pageIdx)}
-                                                        placeholder="Görsel URL / yol"
-                                                        style={{ padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                                                    />
-                                                    {showAdvancedEditor && (
-                                                        <input
-                                                            type="text"
-                                                            value={row.imageId}
-                                                            onChange={(e) => updatePartnerRowField(row.index, 'imageId', e.target.value, pageIdx)}
-                                                            placeholder="Image ID"
-                                                            style={{ padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                                                        />
-                                                    )}
-                                                    <input
-                                                        id={`partner-upload-${pageIdx}-${row.index}`}
-                                                        type="file"
-                                                        accept="image/*"
-                                                        style={{ display: 'none' }}
-                                                        onChange={async (e) => {
-                                                            const f = e.target.files?.[0];
-                                                            if (!f) return;
-                                                            const url = await uploadImage(f);
-                                                            if (url) updatePartnerImageAsset(row, { path: url }, pageIdx);
-                                                            e.target.value = '';
-                                                        }}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        className="btn-secondary"
-                                                        style={{ padding: '8px 10px', fontSize: '12px' }}
-                                                        onClick={() => document.getElementById(`partner-upload-${pageIdx}-${row.index}`)?.click()}
-                                                    >
-                                                        Yüklə
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="btn-secondary"
-                                                        style={{ padding: '8px 10px', fontSize: '12px' }}
-                                                        onClick={() => {
-                                                            const ensured = ensurePartnerImageSlot(row, pageIdx);
-                                                            if (!ensured) return;
-                                                            openImageSelector(pageIdx, ensured);
-                                                        }}
-                                                    >
-                                                        Kitabxana
-                                                    </button>
-                                                </div>
-                                                <input
-                                                    type="text"
-                                                    value={imageAsset?.alt || ''}
-                                                    onChange={(e) => updatePartnerImageAsset(row, { alt: e.target.value }, pageIdx)}
-                                                    placeholder="Görsel alt mətni"
-                                                    style={{ padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
+                                        <ChevronUp size={14} />
+                                    </button>
+                                    <button
+                                        title="Aşağı"
+                                        onClick={() => movePartnerRow(row.index, 'down', pageIdx)}
+                                        disabled={!canMoveDown}
+                                        style={{ width: '30px', height: '30px', border: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px', color: canMoveDown ? '#334155' : '#cbd5e1' }}
+                                    >
+                                        <ChevronDown size={14} />
+                                    </button>
+                                    <button
+                                        title="Sil"
+                                        onClick={() => removePartnerRow(row.index, pageIdx)}
+                                        style={{ width: '30px', height: '30px', border: '1px solid #fee2e2', background: '#fff', borderRadius: '8px', color: '#ef4444' }}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
                                 </div>
                             </div>
                         );
@@ -4154,7 +4146,7 @@ const VisualEditor: React.FC = () => {
                                         .filter((section) => {
                                             if (!isSectionVisibleInAdmin(section) || shouldSkipSectionInEditor(section)) return false;
                                             if (page.id === 'about' && isStatSectionId(section.id)) return false;
-                                            if (page.id === 'partners' && (PARTNER_KEY_REGEX.test(section.id) || section.id === 'SECTION_TITLE')) return false;
+                                            if (page.id === 'partners') return false;
                                             if (page.id === 'rulespage' && RULE_TAB_SECTION_REGEX.test(section.id)) return false;
                                             if (page.id === 'rulespage' && section.id.startsWith('RULES_')) return false;
                                             return matchesSearch(section.id, section.label, section.value, section.url);
@@ -4483,7 +4475,7 @@ const VisualEditor: React.FC = () => {
                                                 )}
                                             </div>
 
-                                            {(page.id !== 'partners' || showAdvancedEditor) && (
+                                            {page.id !== 'partners' && (
                                             <div style={{ marginTop: '1rem' }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                                     <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>
@@ -4855,7 +4847,7 @@ const VisualEditor: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {currentPage.id !== 'rulespage' && (
+                                    {currentPage.id !== 'rulespage' && currentPage.id !== 'partners' && (
                                     <div className="field-group">
                                         <div className="field-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <label><Type size={16} /> Mətn Sahələri</label>
@@ -4905,7 +4897,7 @@ const VisualEditor: React.FC = () => {
                                     </div>
                                     )}
 
-                                    {(currentPage.id !== 'partners' || showAdvancedEditor) && (
+                                    {currentPage.id !== 'partners' && (
                                     <div className="field-group">
                                         <div className="field-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <label><ImageIcon size={16} /> Bölmədəki Şəkillər</label>
@@ -5050,7 +5042,7 @@ const VisualEditor: React.FC = () => {
                                     </div>
                                     )}
 
-                                    {(currentPage.id !== 'partners' || showAdvancedEditor) && (
+                                    {currentPage.id !== 'partners' && (
                                     <div className="field-group">
                                         <label><ImageIcon size={16} /> Yeni Şəkil Yüklə</label>
                                         <div className="upload-dropzone">
