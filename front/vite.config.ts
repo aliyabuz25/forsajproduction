@@ -8,13 +8,13 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          entryFileNames: 'assets/index.js',
+          entryFileNames: 'assets/[name]-[hash].js',
           chunkFileNames: (chunkInfo) => {
-            if (chunkInfo.name === 'vendor-react') return 'assets/vendor-react.js';
-            if (chunkInfo.name === 'vendor-ui') return 'assets/vendor-ui.js';
-            return 'assets/[name].js';
+            if (chunkInfo.name === 'vendor-react') return 'assets/vendor-react-[hash].js';
+            if (chunkInfo.name === 'vendor-ui') return 'assets/vendor-ui-[hash].js';
+            return 'assets/[name]-[hash].js';
           },
-          assetFileNames: 'assets/[name][extname]',
+          assetFileNames: 'assets/[name]-[hash][extname]',
           manualChunks(id) {
             if (!id.includes('node_modules')) return undefined;
             if (id.includes('react-dom') || id.includes('/react/')) return 'vendor-react';
