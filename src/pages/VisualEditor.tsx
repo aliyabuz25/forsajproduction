@@ -99,21 +99,25 @@ const QUILL_MODULES = {
 
 const ICON_PRESETS = ['Shield', 'Users', 'Leaf', 'Zap', 'Target', 'Globe', 'Star', 'Flag'];
 const RULE_TAB_ICON_PRESETS = ['Info', 'Settings', 'ShieldAlert', 'Leaf', 'FileText'];
-const CONTACT_SECTION_GROUPS: Array<{ title: string; ids: string[] }> = [
+const CONTACT_SECTION_GROUPS: Array<{ title: string; subtitle: string; ids: string[] }> = [
     {
         title: 'Səhifə və Sistem',
+        subtitle: 'Səhifə başlığı, status və sistem mesajları',
         ids: ['PAGE_TITLE', 'PAGE_SUBTITLE', 'ONLINE_STATUS_LABEL', 'FORM_TOAST_REQUIRED', 'FORM_TOAST_SUCCESS', 'FORM_TOAST_ERROR']
     },
     {
         title: 'Baş Ofis',
+        subtitle: 'Ofis məlumatları və əsas əlaqə sahələri',
         ids: ['OFFICE_LABEL', 'ADDRESS_LINE_1', 'ADDRESS_LINE_2', 'WORK_HOURS', 'PHONE_LABEL', 'PHONE_NUMBER', 'EMAIL_LABEL', 'EMAIL_Address']
     },
     {
         title: 'Departamentlər',
+        subtitle: 'Departament kartları və e-poçt məlumatları',
         ids: ['DEPT_HQ_TITLE', 'DEPT_HQ_DESC', 'DEPT_HQ_EMAIL', 'DEPT_PR_TITLE', 'DEPT_PR_DESC', 'DEPT_PR_EMAIL', 'DEPT_TECH_TITLE', 'DEPT_TECH_DESC', 'DEPT_TECH_EMAIL']
     },
     {
         title: 'Form',
+        subtitle: 'Müraciət formu sahələri və seçimlər',
         ids: [
             'FORM_TITLE',
             'FORM_STATUS_LABEL',
@@ -2441,11 +2445,11 @@ const VisualEditor: React.FC = () => {
                 .map((id) => displayedSections.find((section) => section.id === id))
                 .filter(Boolean) as Section[];
             sections.forEach((section) => usedIds.add(section.id));
-            return { title: group.title, sections };
+            return { title: group.title, subtitle: group.subtitle, sections };
         }).filter((group) => group.sections.length > 0);
 
         const extraSections = displayedSections.filter((section) => !usedIds.has(section.id));
-        if (extraSections.length > 0) groups.push({ title: 'Digər Sahələr', sections: extraSections });
+        if (extraSections.length > 0) groups.push({ title: 'Digər Sahələr', subtitle: 'Avtomatik qruplaşdırıla bilməyən sahələr', sections: extraSections });
         return groups;
     })();
 
@@ -4112,9 +4116,14 @@ const VisualEditor: React.FC = () => {
                                                 </div>
                                             ) : currentPage?.id === 'contactpage' ? (
                                                 contactGroupedSections.map((group) => (
-                                                    <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                        <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>
-                                                            {group.title}
+                                                    <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', padding: '12px' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', padding: '4px 2px 8px 2px', borderBottom: '1px solid #e2e8f0' }}>
+                                                            <div style={{ fontSize: '12px', color: '#334155', fontWeight: 900, textTransform: 'uppercase' }}>
+                                                                {group.title}
+                                                            </div>
+                                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                                                                {group.subtitle}
+                                                            </div>
                                                         </div>
                                                         {group.sections.map((section, index) => renderTextSectionCard(section, index))}
                                                     </div>
