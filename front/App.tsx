@@ -12,14 +12,28 @@ import RulesPage from './components/RulesPage';
 import ContactPage from './components/ContactPage';
 import GalleryPage from './components/GalleryPage';
 import Footer from './components/Footer';
+import PrivacyPolicyPage from './components/PrivacyPolicyPage';
+import TermsOfServicePage from './components/TermsOfServicePage';
 import { useSiteContent } from './hooks/useSiteContent';
 import { useEffect } from 'react';
 
+type FrontView =
+  | 'home'
+  | 'about'
+  | 'news'
+  | 'events'
+  | 'drivers'
+  | 'rules'
+  | 'contact'
+  | 'gallery'
+  | 'privacy'
+  | 'terms';
+
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery'>('home');
+  const [currentView, setCurrentView] = useState<FrontView>('home');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  const handleViewChange = (view: 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery', category: string | null = null) => {
+  const handleViewChange = (view: FrontView, category: string | null = null) => {
     setCurrentView(view);
     setActiveCategory(category);
     window.scrollTo(0, 0);
@@ -120,6 +134,8 @@ const App: React.FC = () => {
         {currentView === 'rules' && <RulesPage />}
         {currentView === 'contact' && <ContactPage />}
         {currentView === 'gallery' && <GalleryPage />}
+        {currentView === 'privacy' && <PrivacyPolicyPage />}
+        {currentView === 'terms' && <TermsOfServicePage />}
       </main>
       <Footer onViewChange={(view) => handleViewChange(view, null)} />
     </div>

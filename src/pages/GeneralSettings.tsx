@@ -95,7 +95,7 @@ const GeneralSettings: React.FC = () => {
             seo: 'seo-basic',
             general: 'branding',
             contact: 'contact-details',
-            social: 'social-links',
+            social: 'branding',
             stats: 'stats',
             marquee: 'marquee-settings',
         };
@@ -503,47 +503,6 @@ const GeneralSettings: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Branding Section */}
-                <div className={getCardClassName('branding')} data-settings-section="branding">
-                    <div className="card-header">
-                        <ImageIcon size={20} className="text-orange-500" />
-                        <h2>Brendinq & Loqo</h2>
-                        {renderCardAction('branding')}
-                    </div>
-                    <div className="card-body">
-                        <div className="logo-upload-grid">
-                            <div className="logo-box">
-                                <label>Əsas Loqo (Light)</label>
-                                <div className="logo-preview">
-                                    {getFieldValue('SITE_LOGO_LIGHT', true) ? (
-                                        <img src={getFieldValue('SITE_LOGO_LIGHT', true)} alt="Logo Light" />
-                                    ) : (
-                                        <div className="no-logo">Loqo yoxdur</div>
-                                    )}
-                                </div>
-                                <label className="upload-btn">
-                                    <Upload size={14} /> Yüklə
-                                    <input type="file" hidden onChange={(e) => handleFileUpload(e, 'SITE_LOGO_LIGHT')} />
-                                </label>
-                            </div>
-                            <div className="logo-box">
-                                <label>Alternativ Loqo (Dark)</label>
-                                <div className="logo-preview dark-bg">
-                                    {getFieldValue('SITE_LOGO_DARK', true) ? (
-                                        <img src={getFieldValue('SITE_LOGO_DARK', true)} alt="Logo Dark" />
-                                    ) : (
-                                        <div className="no-logo">Loqo yoxdur</div>
-                                    )}
-                                </div>
-                                <label className="upload-btn">
-                                    <Upload size={14} /> Yüklə
-                                    <input type="file" hidden onChange={(e) => handleFileUpload(e, 'SITE_LOGO_DARK')} />
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 {/* Contact Details Section */}
                 <div className={getCardClassName('contact-details')} data-settings-section="contact-details">
                     <div className="card-header">
@@ -636,6 +595,47 @@ const GeneralSettings: React.FC = () => {
                                 onChange={(e) => updateField('DEPT_TECH_EMAIL', e.target.value)}
                                 placeholder="tech@forsaj.az"
                             />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Branding Section */}
+                <div className={getCardClassName('branding')} data-settings-section="branding">
+                    <div className="card-header">
+                        <ImageIcon size={20} className="text-orange-500" />
+                        <h2>Brendinq & Loqo</h2>
+                        {renderCardAction('branding')}
+                    </div>
+                    <div className="card-body">
+                        <div className="logo-upload-grid">
+                            <div className="logo-box">
+                                <label>Əsas Loqo (Light)</label>
+                                <div className="logo-preview">
+                                    {getFieldValue('SITE_LOGO_LIGHT', true) ? (
+                                        <img src={getFieldValue('SITE_LOGO_LIGHT', true)} alt="Logo Light" />
+                                    ) : (
+                                        <div className="no-logo">Loqo yoxdur</div>
+                                    )}
+                                </div>
+                                <label className="upload-btn">
+                                    <Upload size={14} /> Yüklə
+                                    <input type="file" hidden onChange={(e) => handleFileUpload(e, 'SITE_LOGO_LIGHT')} />
+                                </label>
+                            </div>
+                            <div className="logo-box">
+                                <label>Alternativ Loqo (Dark)</label>
+                                <div className="logo-preview dark-bg">
+                                    {getFieldValue('SITE_LOGO_DARK', true) ? (
+                                        <img src={getFieldValue('SITE_LOGO_DARK', true)} alt="Logo Dark" />
+                                    ) : (
+                                        <div className="no-logo">Loqo yoxdur</div>
+                                    )}
+                                </div>
+                                <label className="upload-btn">
+                                    <Upload size={14} /> Yüklə
+                                    <input type="file" hidden onChange={(e) => handleFileUpload(e, 'SITE_LOGO_DARK')} />
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -5,7 +5,7 @@ import { useSiteContent } from '../hooks/useSiteContent';
 import { resolveSocialLinks } from '../utils/socialLinks';
 
 interface FooterProps {
-  onViewChange: (view: 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery') => void;
+  onViewChange: (view: 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms') => void;
 }
 
 const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
@@ -20,10 +20,10 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
   const newsletterDesc = getText('FOOTER_NEWSLETTER_DESC', 'Yarış təqvimi və xəbərlərdən anında xəbərdar olmaq üçün abunə olun.');
   const newsletterPlaceholder = getText('FOOTER_NEWSLETTER_PLACEHOLDER', 'EMAIL DAXİL EDİN');
   const copyrightText = getText('FOOTER_COPYRIGHT', '© 2024 FORSAJ CLUB. ALL RIGHTS RESERVED.');
-  const privacyLabel = getText('FOOTER_PRIVACY_LABEL', 'Privacy Policy');
-  const termsLabel = getText('FOOTER_TERMS_LABEL', 'Terms of Service');
-  const privacyUrl = getUrl('FOOTER_PRIVACY_LABEL', '#');
-  const termsUrl = getUrl('FOOTER_TERMS_LABEL', '#');
+  const privacyLabel = getText('FOOTER_PRIVACY_LABEL', getText('txt-privacy-policy-517', 'Privacy Policy'));
+  const termsLabel = getText('FOOTER_TERMS_LABEL', getText('txt-terms-of-servic-731', 'Terms of Service'));
+  const privacyUrl = getUrl('FOOTER_PRIVACY_LABEL', getUrl('txt-privacy-policy-517', 'privacy'));
+  const termsUrl = getUrl('FOOTER_TERMS_LABEL', getUrl('txt-terms-of-servic-731', 'terms'));
 
   const logoImg = getImageGeneral('SITE_LOGO_LIGHT').path;
 
@@ -40,6 +40,75 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
     Icon: socialIconMap[platform],
     url
   }));
+
+  const resolveInternalView = (
+    rawValue: string,
+    fallback: 'privacy' | 'terms'
+  ): 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms' | null => {
+    const value = (rawValue || '').trim();
+    if (!value || value === '#') return fallback;
+    if (/^https?:\/\//i.test(value)) return null;
+
+    const normalize = (token: string) =>
+      token
+        .toLocaleLowerCase('az')
+        .replace(/ə/g, 'e')
+        .replace(/ı/g, 'i')
+        .replace(/ö/g, 'o')
+        .replace(/ü/g, 'u')
+        .replace(/ğ/g, 'g')
+        .replace(/ş/g, 's')
+        .replace(/ç/g, 'c')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '');
+
+    const direct = normalize(value);
+    const directMap: Record<string, 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms'> = {
+      home: 'home',
+      about: 'about',
+      news: 'news',
+      events: 'events',
+      drivers: 'drivers',
+      rules: 'rules',
+      contact: 'contact',
+      gallery: 'gallery',
+      privacy: 'privacy',
+      privacypolicy: 'privacy',
+      mexfiliksiyaseti: 'privacy',
+      terms: 'terms',
+      termsofservice: 'terms',
+      xidmetsertleri: 'terms'
+    };
+
+    if (directMap[direct]) return directMap[direct];
+
+    try {
+      const parsed = new URL(value, window.location.origin);
+      if (parsed.origin !== window.location.origin) return null;
+      const pathToken = normalize(parsed.pathname.replace(/^\/+|\/+$/g, ''));
+      const queryView = normalize(parsed.searchParams.get('view') || '');
+
+      if (directMap[pathToken]) return directMap[pathToken];
+      if (directMap[queryView]) return directMap[queryView];
+    } catch {
+      return fallback;
+    }
+
+    return fallback;
+  };
+
+  const handleLegalNavigation = (rawValue: string, fallback: 'privacy' | 'terms') => {
+    const value = (rawValue || '').trim();
+    if (/^https?:\/\//i.test(value)) {
+      window.open(value, '_blank');
+      return;
+    }
+    const internalView = resolveInternalView(value, fallback);
+    if (internalView) {
+      onViewChange(internalView);
+    }
+  };
 
 
   const navigationLinks = [
@@ -194,8 +263,34 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
           {copyrightText}
         </p>
         <div className="flex gap-10">
-          <a href={privacyUrl || '#'} target={privacyUrl?.startsWith('http') ? '_blank' : undefined} rel={privacyUrl?.startsWith('http') ? 'noopener noreferrer' : undefined} className="text-gray-600 font-black italic text-[9px] uppercase tracking-widest hover:text-[#FF4D00] transition-colors">{privacyLabel}</a>
-          <a href={termsUrl || '#'} target={termsUrl?.startsWith('http') ? '_blank' : undefined} rel={termsUrl?.startsWith('http') ? 'noopener noreferrer' : undefined} className="text-gray-600 font-black italic text-[9px] uppercase tracking-widest hover:text-[#FF4D00] transition-colors">{termsLabel}</a>
+          <a
+            href={privacyUrl || '#'}
+            target={privacyUrl?.startsWith('http') ? '_blank' : undefined}
+            rel={privacyUrl?.startsWith('http') ? 'noopener noreferrer' : undefined}
+            onClick={(e) => {
+              if (!privacyUrl?.startsWith('http')) {
+                e.preventDefault();
+                handleLegalNavigation(privacyUrl, 'privacy');
+              }
+            }}
+            className="text-gray-600 font-black italic text-[9px] uppercase tracking-widest hover:text-[#FF4D00] transition-colors"
+          >
+            {privacyLabel}
+          </a>
+          <a
+            href={termsUrl || '#'}
+            target={termsUrl?.startsWith('http') ? '_blank' : undefined}
+            rel={termsUrl?.startsWith('http') ? 'noopener noreferrer' : undefined}
+            onClick={(e) => {
+              if (!termsUrl?.startsWith('http')) {
+                e.preventDefault();
+                handleLegalNavigation(termsUrl, 'terms');
+              }
+            }}
+            className="text-gray-600 font-black italic text-[9px] uppercase tracking-widest hover:text-[#FF4D00] transition-colors"
+          >
+            {termsLabel}
+          </a>
         </div>
       </div>
     </footer>

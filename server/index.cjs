@@ -1195,6 +1195,8 @@ app.all('/api/extract-content', async (req, res) => {
                         'driverspage': 'Sürücülər Səhifəsi',
                         'gallerypage': 'Qalereya',
                         'rulespage': 'Qaydalar',
+                        'privacypolicypage': 'Məxfilik Siyasəti',
+                        'termsofservicepage': 'Xidmət Şərtləri',
                         'contactpage': 'Əlaqə Səhifəsi',
                         'categoryleaders': 'Kateqoriya Liderləri',
                         'footer': 'Sayt Sonu',
@@ -1422,7 +1424,8 @@ app.all('/api/extract-content', async (req, res) => {
             'home': 1, 'about': 2, 'news': 3, 'newspage': 4,
             'events': 5, 'eventspage': 6, 'drivers': 7,
             'driverspage': 8, 'gallery': 9, 'gallerypage': 10,
-            'rules': 11, 'rulespage': 12, 'contact': 13, 'contactpage': 14
+            'rules': 11, 'rulespage': 12, 'privacypolicypage': 13, 'termsofservicepage': 14,
+            'contact': 15, 'contactpage': 16
         };
 
         newContent.sort((a, b) => (orderWeight[a.id] || 100) - (orderWeight[b.id] || 100));
@@ -1491,7 +1494,9 @@ app.all('/api/extract-content', async (req, res) => {
                 title: 'QAYDALAR',
                 icon: 'Shield',
                 children: [
-                    { title: 'Qaydalar Səhifəsi', path: '/?page=rulespage', icon: 'Layout' }
+                    { title: 'Qaydalar Səhifəsi', path: '/?page=rulespage', icon: 'Layout' },
+                    { title: 'Məxfilik Siyasəti', path: '/?page=privacypolicypage', icon: 'FileText' },
+                    { title: 'Xidmət Şərtləri', path: '/?page=termsofservicepage', icon: 'FileText' }
                 ]
             },
             {

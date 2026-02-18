@@ -32,6 +32,7 @@ const titleMap: Record<string, string> = {
   'ƏLAQƏ': 'Əlaqə',
   'ADMİN HESABLARI': 'İstifadəçi İdarəsi',
   'SİSTEM AYARLARI': 'Sistem Ayarları',
+  SOSYAL: 'Sosyal',
 };
 
 const childTitleMap: Record<string, string> = {
@@ -214,6 +215,36 @@ const App: React.FC = () => {
             items.splice(adminIdx + 1, 0, canonicalSystemItem);
           } else {
             items.push(canonicalSystemItem);
+          }
+
+          // Add a direct top-level shortcut for social media links editing.
+          const hasSocialShortcut = items.some((item) =>
+            normalizeText(item.title || '') === 'sosyal' ||
+            normalizeText(sanitizeMenuPath(item.path) || '') === '/general-settings?tab=social'
+          );
+
+          if (!hasSocialShortcut) {
+            const socialShortcut: SidebarItem = {
+              title: 'Sosyal',
+              icon: 'Globe',
+              path: '/general-settings?tab=social'
+            };
+
+            const settingsIdx = items.findIndex((item) =>
+              normalizeText(item.title || '') === 'sistem ayarlari' ||
+              normalizeText(sanitizeMenuPath(item.path) || '') === '/general-settings?tab=general'
+            );
+            const applicationsIdx = items.findIndex((item) =>
+              normalizeText(item.path || '') === '/applications'
+            );
+
+            if (settingsIdx >= 0) {
+              items.splice(settingsIdx + 1, 0, socialShortcut);
+            } else if (applicationsIdx >= 0) {
+              items.splice(applicationsIdx, 0, socialShortcut);
+            } else {
+              items.push(socialShortcut);
+            }
           }
 
           // Final guard against duplicate top-level menu names.

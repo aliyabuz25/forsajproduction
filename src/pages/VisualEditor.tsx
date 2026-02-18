@@ -348,6 +348,8 @@ const componentLabels: Record<string, string> = {
     'gallery': 'Qalereya',
     'videos': 'Videolar',
     'videoarchive': 'Video Arxiv',
+    'privacypolicypage': 'Məxfilik Siyasəti',
+    'termsofservicepage': 'Xidmət Şərtləri',
     'footer': 'Footer',
     'partners': 'Tərəfdaşlar',
     'offroadinfo': 'Offroad Nədir?',
@@ -367,7 +369,7 @@ const TAB_PAGE_GROUPS: Record<string, string[]> = {
     eventstab: ['eventspage'],
     driverstab: ['drivers'],
     gallerytab: ['gallerypage', 'gallery', 'videos', 'videoarchive'],
-    rulestab: ['rulespage'],
+    rulestab: ['rulespage', 'privacypolicypage', 'termsofservicepage'],
     contacttab: ['contactpage']
 };
 
@@ -483,6 +485,7 @@ const VisualEditor: React.FC = () => {
                 const defaultIds = [
                     'hero', 'marquee', 'navbar', 'about', 'mission_vision', 'values',
                     'rulespage', 'eventspage', 'newspage', 'gallerypage', 'contactpage',
+                    'privacypolicypage', 'termsofservicepage',
                     'news', 'drivers', 'driverspage', 'categoryleaders', 'gallery', 'videos', 'videoarchive',
                     'footer', 'partners', 'offroadinfo', 'whatisoffroad', 'nextrace',
                     'site', 'settings', 'general', 'app'
@@ -787,9 +790,22 @@ const VisualEditor: React.FC = () => {
                         { id: 'FOOTER_NEWSLETTER_DESC', label: 'Footer Abunə Təsviri', value: 'Yarış təqvimi və xəbərlərdən anında xəbərdar olmaq üçün abunə olun.' },
                         { id: 'FOOTER_NEWSLETTER_PLACEHOLDER', label: 'Footer Abunə Placeholder', value: 'EMAIL DAXİL EDİN' },
                         { id: 'FOOTER_COPYRIGHT', label: 'Footer Copyright', value: '© 2024 FORSAJ CLUB. ALL RIGHTS RESERVED.' },
-                        { id: 'FOOTER_PRIVACY_LABEL', label: 'Footer Privacy Link Mətni', value: 'Privacy Policy', url: '#' },
-                        { id: 'FOOTER_TERMS_LABEL', label: 'Footer Terms Link Mətni', value: 'Terms of Service', url: '#' }
+                        { id: 'FOOTER_PRIVACY_LABEL', label: 'Footer Privacy Link Mətni', value: 'Privacy Policy', url: 'privacy' },
+                        { id: 'FOOTER_TERMS_LABEL', label: 'Footer Terms Link Mətni', value: 'Terms of Service', url: 'terms' }
                     ]);
+
+                    const sections = page.sections || [];
+                    const ensureUrl = (id: string, url: string) => {
+                        const idx = sections.findIndex((s) => s.id === id);
+                        if (idx === -1) return;
+                        const currentUrl = String(sections[idx].url || '').trim();
+                        if (!currentUrl || currentUrl === '#') {
+                            sections[idx].url = url;
+                        }
+                    };
+                    ensureUrl('FOOTER_PRIVACY_LABEL', 'privacy');
+                    ensureUrl('FOOTER_TERMS_LABEL', 'terms');
+                    page.sections = sections;
                 };
                 const ensureCategoryLeaderDefaults = (page: PageContent) => {
                     ensurePageSectionDefaults(page, [
@@ -881,6 +897,83 @@ const VisualEditor: React.FC = () => {
                     const missingDynamicSections = dynamicSections.filter((section) => !existingIds.has(section.id));
                     page.sections = [...sections, ...missingDynamicSections];
                 };
+                const ensurePrivacyPolicyDefaults = (page: PageContent) => {
+                    ensurePageSectionDefaults(page, [
+                        { id: 'PAGE_TITLE', label: 'Səhifə Başlığı', value: 'MƏXFİLİK SİYASƏTİ (PRIVACY POLICY)' },
+                        { id: 'PAGE_SUBTITLE', label: 'Səhifə Alt Başlığı', value: 'MƏLUMATLARIN QORUNMASI VƏ İSTİFADƏ ŞƏRTLƏRİ' },
+                        { id: 'INTRO_TEXT', label: 'Giriş Mətni', value: 'Bu Məxfilik Siyasəti forsaj.az (“Sayt”, “biz”, “bizim”) tərəfindən istifadəçilərdən toplanan məlumatların növlərini, istifadə qaydasını və qorunmasını izah edir.' },
+                        { id: 'UPDATED_LABEL', label: 'Yenilənmə Tarixi Etiketi', value: 'Son yenilənmə tarixi' },
+                        { id: 'UPDATED_DATE', label: 'Yenilənmə Tarixi', value: '18 Fevral 2026' },
+
+                        { id: 'SECTION_1_TITLE', label: 'Bölmə 1 Başlıq', value: '1. Ümumi Məlumat' },
+                        { id: 'SECTION_1_BODY', label: 'Bölmə 1 Mətn', value: 'Bu Məxfilik Siyasəti forsaj.az (“Sayt”, “biz”, “bizim”) tərəfindən istifadəçilərdən toplanan məlumatların növlərini, istifadə qaydasını və qorunmasını izah edir. Saytdan istifadə etməklə bu siyasətin şərtlərini qəbul etmiş olursunuz.' },
+
+                        { id: 'SECTION_2_TITLE', label: 'Bölmə 2 Başlıq', value: '2. Toplanan Məlumatlar' },
+                        { id: 'SECTION_2_BODY', label: 'Bölmə 2 Mətn', value: 'Şəxsi məlumatlar:\n- Ad və soyad\n- Elektron poçt ünvanı\n- Telefon nömrəsi (təqdim edildiyi halda)\n\nTexniki məlumatlar:\n- IP ünvan\n- Brauzer növü və cihaz məlumatları\n- Saytda fəaliyyət məlumatları (baxışlar, kliklər və s.)' },
+
+                        { id: 'SECTION_3_TITLE', label: 'Bölmə 3 Başlıq', value: '3. Məlumatların İstifadə Məqsədi' },
+                        { id: 'SECTION_3_BODY', label: 'Bölmə 3 Mətn', value: 'Toplanan məlumatlar aşağıdakı məqsədlərlə istifadə olunur:\n- Xidmətlərin təqdim edilməsi və inkişaf etdirilməsi\n- İstifadəçi sorğularına cavab verilməsi\n- Təhlükəsizliyin təmin olunması\n- Statistik və analitik təhlillər aparılması' },
+
+                        { id: 'SECTION_4_TITLE', label: 'Bölmə 4 Başlıq', value: '4. Cookies (Kukilər)' },
+                        { id: 'SECTION_4_BODY', label: 'Bölmə 4 Mətn', value: 'Sayt istifadəçi təcrübəsini yaxşılaşdırmaq üçün kukilərdən istifadə edə bilər. İstifadəçi brauzer vasitəsilə kukiləri deaktiv edə bilər.' },
+
+                        { id: 'SECTION_5_TITLE', label: 'Bölmə 5 Başlıq', value: '5. Məlumatların Üçüncü Tərəflərlə Paylaşılması' },
+                        { id: 'SECTION_5_BODY', label: 'Bölmə 5 Mətn', value: 'Şəxsi məlumatlar yalnız aşağı hallarda üçüncü tərəflərlə paylaşıla bilər:\n- Qanunvericiliyin tələbi olduqda\n- Texniki və xidmət tərəfdaşları ilə əməkdaşlıq çərçivəsində\n- İstifadəçinin razılığı ilə' },
+
+                        { id: 'SECTION_6_TITLE', label: 'Bölmə 6 Başlıq', value: '6. Məlumat Təhlükəsizliyi' },
+                        { id: 'SECTION_6_BODY', label: 'Bölmə 6 Mətn', value: 'Biz şəxsi məlumatların qorunması üçün müvafiq texniki və inzibati təhlükəsizlik tədbirləri tətbiq edirik.' },
+
+                        { id: 'SECTION_7_TITLE', label: 'Bölmə 7 Başlıq', value: '7. İstifadəçi Hüquqları' },
+                        { id: 'SECTION_7_BODY', label: 'Bölmə 7 Mətn', value: 'İstifadəçilər:\n- Öz məlumatlarına çıxış tələb edə bilər\n- Düzəliş və ya silinmə tələb edə bilər\n- Məlumatların işlənməsinə etiraz edə bilər' },
+
+                        { id: 'SECTION_8_TITLE', label: 'Bölmə 8 Başlıq', value: '8. Siyasətdə Dəyişikliklər' },
+                        { id: 'SECTION_8_BODY', label: 'Bölmə 8 Mətn', value: 'Bu siyasət zaman-zaman yenilənə bilər. Yenilənmiş versiya saytda dərc edildiyi tarixdən qüvvəyə minir.' },
+
+                        { id: 'SECTION_9_TITLE', label: 'Bölmə 9 Başlıq', value: '9. Əlaqə' },
+                        { id: 'SECTION_9_BODY', label: 'Bölmə 9 Mətn', value: 'Email: info@forsaj.az\nVeb sayt: https://forsaj.az' },
+
+                        { id: 'CONTACT_TITLE', label: 'Əlaqə Bölməsi Başlığı', value: 'Əlaqə' },
+                        { id: 'CONTACT_EMAIL', label: 'Əlaqə E-poçtu', value: 'info@forsaj.az' },
+                        { id: 'CONTACT_WEBSITE', label: 'Əlaqə Vebsaytı', value: 'https://forsaj.az' }
+                    ]);
+                };
+                const ensureTermsOfServiceDefaults = (page: PageContent) => {
+                    ensurePageSectionDefaults(page, [
+                        { id: 'PAGE_TITLE', label: 'Səhifə Başlığı', value: 'XİDMƏT ŞƏRTLƏRİ (TERMS OF SERVICE)' },
+                        { id: 'PAGE_SUBTITLE', label: 'Səhifə Alt Başlığı', value: 'İSTİFADƏ QAYDALARI VƏ HÜQUQİ ŞƏRTLƏR' },
+                        { id: 'INTRO_TEXT', label: 'Giriş Mətni', value: 'forsaj.az saytından istifadə etməklə siz bu Xidmət Şərtlərini qəbul etmiş olursunuz.' },
+                        { id: 'UPDATED_LABEL', label: 'Yenilənmə Tarixi Etiketi', value: 'Son yenilənmə tarixi' },
+                        { id: 'UPDATED_DATE', label: 'Yenilənmə Tarixi', value: '18 Fevral 2026' },
+
+                        { id: 'SECTION_1_TITLE', label: 'Bölmə 1 Başlıq', value: '1. Qəbul' },
+                        { id: 'SECTION_1_BODY', label: 'Bölmə 1 Mətn', value: 'forsaj.az saytından istifadə etməklə siz bu Xidmət Şərtlərini qəbul etmiş olursunuz.' },
+
+                        { id: 'SECTION_2_TITLE', label: 'Bölmə 2 Başlıq', value: '2. Xidmətin Təsviri' },
+                        { id: 'SECTION_2_BODY', label: 'Bölmə 2 Mətn', value: 'forsaj.az avtomobil, motorsport, off-road və Forsaj icması ilə bağlı məlumat, tədbir və digər rəqəmsal xidmətlər təqdim edir.' },
+
+                        { id: 'SECTION_3_TITLE', label: 'Bölmə 3 Başlıq', value: '3. İstifadə Qaydaları' },
+                        { id: 'SECTION_3_BODY', label: 'Bölmə 3 Mətn', value: 'İstifadəçi:\n- Saytdan yalnız qanuni məqsədlərlə istifadə etməlidir\n- Digər istifadəçilərin hüquqlarını pozmamalıdır\n- Saytın texniki sisteminə zərər verə biləcək hərəkətlər etməməlidir' },
+
+                        { id: 'SECTION_4_TITLE', label: 'Bölmə 4 Başlıq', value: '4. Əqli Mülkiyyət Hüquqları' },
+                        { id: 'SECTION_4_BODY', label: 'Bölmə 4 Mətn', value: 'Saytda yerləşdirilən bütün məzmun (mətnlər, şəkillər, videolar, loqo və s.) müəllif hüquqları ilə qorunur və icazəsiz istifadə edilə bilməz.' },
+
+                        { id: 'SECTION_5_TITLE', label: 'Bölmə 5 Başlıq', value: '5. Məsuliyyətin Məhdudlaşdırılması' },
+                        { id: 'SECTION_5_BODY', label: 'Bölmə 5 Mətn', value: 'Sayt və xidmətlər “olduğu kimi” təqdim olunur. Texniki nasazlıq və ya fasilələrə görə sayt rəhbərliyi məsuliyyət daşımır.' },
+
+                        { id: 'SECTION_6_TITLE', label: 'Bölmə 6 Başlıq', value: '6. Dəyişiklik Hüququ' },
+                        { id: 'SECTION_6_BODY', label: 'Bölmə 6 Mətn', value: 'Biz bu şərtləri istənilən vaxt dəyişdirmək hüququnu özümüzdə saxlayırıq. Yenilənmiş versiya saytda dərc edildiyi tarixdən qüvvəyə minir.' },
+
+                        { id: 'SECTION_7_TITLE', label: 'Bölmə 7 Başlıq', value: '7. Tətbiq Olunan Qanun' },
+                        { id: 'SECTION_7_BODY', label: 'Bölmə 7 Mətn', value: 'Bu Xidmət Şərtləri Azərbaycan Respublikasının qanunvericiliyinə uyğun tənzimlənir.' },
+
+                        { id: 'SECTION_8_TITLE', label: 'Bölmə 8 Başlıq', value: '8. Əlaqə' },
+                        { id: 'SECTION_8_BODY', label: 'Bölmə 8 Mətn', value: 'Email: info@forsaj.az\nVeb sayt: https://forsaj.az' },
+
+                        { id: 'CONTACT_TITLE', label: 'Əlaqə Bölməsi Başlığı', value: 'Əlaqə' },
+                        { id: 'CONTACT_EMAIL', label: 'Əlaqə E-poçtu', value: 'info@forsaj.az' },
+                        { id: 'CONTACT_WEBSITE', label: 'Əlaqə Vebsaytı', value: 'https://forsaj.az' }
+                    ]);
+                };
 
                 defaultIds.forEach(id => {
                     const found = updatedContent.find(p => p.id === id);
@@ -915,6 +1008,10 @@ const VisualEditor: React.FC = () => {
                         ensureNextRaceDefaults(found);
                     } else if (id === 'rulespage') {
                         ensureRulesDefaults(found);
+                    } else if (id === 'privacypolicypage') {
+                        ensurePrivacyPolicyDefaults(found);
+                    } else if (id === 'termsofservicepage') {
+                        ensureTermsOfServiceDefaults(found);
                     }
                 });
 
@@ -942,6 +1039,10 @@ const VisualEditor: React.FC = () => {
                 if (nextRacePage) ensureNextRaceDefaults(nextRacePage);
                 const rulesPage = updatedContent.find(p => p.id === 'rulespage');
                 if (rulesPage) ensureRulesDefaults(rulesPage);
+                const privacyPolicyPage = updatedContent.find(p => p.id === 'privacypolicypage');
+                if (privacyPolicyPage) ensurePrivacyPolicyDefaults(privacyPolicyPage);
+                const termsOfServicePage = updatedContent.find(p => p.id === 'termsofservicepage');
+                if (termsOfServicePage) ensureTermsOfServiceDefaults(termsOfServicePage);
 
                 const defaultRank = new Map(defaultIds.map((id, idx) => [id, idx]));
                 updatedContent.sort((a, b) => {

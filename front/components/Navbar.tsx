@@ -3,8 +3,8 @@ import { Globe, ChevronDown } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
 
 interface NavbarProps {
-  currentView: 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery';
-  onViewChange: (view: 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery') => void;
+  currentView: 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms';
+  onViewChange: (view: 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms') => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
@@ -26,7 +26,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
     { name: 'ƏLAQƏ', target: { type: 'view', view: 'contact' } as NavTarget, activeView: 'contact' },
   ];
 
-  const viewIds = new Set(['home', 'about', 'news', 'events', 'drivers', 'gallery', 'rules', 'contact']);
+  const viewIds = new Set(['home', 'about', 'news', 'events', 'drivers', 'gallery', 'rules', 'contact', 'privacy', 'terms']);
   const viewByPath: Record<string, string> = {
     home: 'home',
     about: 'about',
@@ -43,6 +43,12 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
     suruculer: 'drivers',
     qaydalar: 'rules',
     elaqe: 'contact',
+    privacy: 'privacy',
+    privacypolicy: 'privacy',
+    mexfiliksiyaseti: 'privacy',
+    terms: 'terms',
+    termsofservice: 'terms',
+    xidmetsertleri: 'terms',
   };
 
   type NavTarget =
@@ -72,6 +78,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
     if (token.includes('qalereya') || token.includes('galereya')) return 'gallery';
     if (token.includes('qayda')) return 'rules';
     if (token.includes('elaqe') || token.includes('laq') || token.includes('elaq')) return 'contact';
+    if (token.includes('privacy') || token.includes('mexfilik')) return 'privacy';
+    if (token.includes('terms') || token.includes('xidmetsert')) return 'terms';
     return null;
   };
 
