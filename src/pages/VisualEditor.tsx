@@ -89,11 +89,10 @@ interface DriverCategory {
 
 const QUILL_MODULES = {
     toolbar: [
-        [{ 'header': [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'color': [] }, { 'background': [] }],
+        [{ 'header': [2, 3, false] }],
+        ['bold', 'italic', 'underline'],
         [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        ['link', 'image', 'video'],
+        ['link'],
         ['clean']
     ],
 };
@@ -1677,6 +1676,25 @@ const VisualEditor: React.FC = () => {
         );
     };
 
+    const searchQuery = searchTerm.trim().toLowerCase();
+    const matchesSearch = (...values: Array<string | number | undefined>) => {
+        if (!searchQuery) return true;
+        return values.some((value) => (value || '').toString().toLowerCase().includes(searchQuery));
+    };
+
+    const filteredNews = news.filter((item) =>
+        matchesSearch(item.title, item.date, item.category, item.status, item.description)
+    );
+    const filteredEvents = events.filter((item) =>
+        matchesSearch(item.title, item.date, item.location, item.category, item.status, item.description)
+    );
+    const filteredVideos = videos.filter((item) =>
+        matchesSearch(item.title, item.duration, item.youtubeUrl, item.videoId, item.created_at)
+    );
+    const filteredPhotos = galleryPhotos.filter((item) =>
+        matchesSearch(item.title, item.url)
+    );
+
     return (
         <div className="visual-editor fade-in">
             <div className="editor-header">
@@ -1757,12 +1775,14 @@ const VisualEditor: React.FC = () => {
                             </button>
                         </div>
                         <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
-                            {news.length === 0 ? (
+                            {filteredNews.length === 0 ? (
                                 <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
-                                    Hələ heç bir xəbər yoxdur. Yeni xəbər yaratmaq üçün yuxarıdakı "+" düyməsini basın.
+                                    {searchQuery
+                                        ? 'Axtarışa uyğun xəbər tapılmadı.'
+                                        : 'Hələ heç bir xəbər yoxdur. Yeni xəbər yaratmaq üçün yuxarıdakı "+" düyməsini basın.'}
                                 </div>
                             ) : (
-                                news.map((item) => (
+                                filteredNews.map((item) => (
                                     <div key={item.id} className="page-nav-wrapper" style={{ position: 'relative', marginBottom: '4px' }}>
                                         <button
                                             className={`page-nav-item ${selectedNewsId === item.id ? 'active' : ''}`}
@@ -1885,12 +1905,14 @@ const VisualEditor: React.FC = () => {
                             </button>
                         </div>
                         <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
-                            {events.length === 0 ? (
+                            {filteredEvents.length === 0 ? (
                                 <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
-                                    Hələ heç bir tədbir yoxdur. Yeni tədbir yaratmaq üçün yuxarıdakı "+" düyməsini basın.
+                                    {searchQuery
+                                        ? 'Axtarışa uyğun tədbir tapılmadı.'
+                                        : 'Hələ heç bir tədbir yoxdur. Yeni tədbir yaratmaq üçün yuxarıdakı "+" düyməsini basın.'}
                                 </div>
                             ) : (
-                                events.map((evt) => (
+                                filteredEvents.map((evt) => (
                                     <div key={evt.id} className="page-nav-wrapper" style={{ position: 'relative', marginBottom: '4px' }}>
                                         <button
                                             className={`page-nav-item ${selectedEventId === evt.id ? 'active' : ''}`}
@@ -2083,12 +2105,16 @@ const VisualEditor: React.FC = () => {
                             </button>
                         </div>
                         <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
-                            {selectedCatId && driverCategories.find(c => c.id === selectedCatId)?.drivers.length === 0 ? (
+                            {selectedCatId && (driverCategories.find(c => c.id === selectedCatId)?.drivers || []).filter((d) =>
+                                matchesSearch(d.name, d.license, d.team, d.rank, d.points, d.wins)
+                            ).length === 0 ? (
                                 <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
-                                    Bu kateqoriyada sürücü yoxdur.
+                                    {searchQuery ? 'Axtarışa uyğun sürücü tapılmadı.' : 'Bu kateqoriyada sürücü yoxdur.'}
                                 </div>
                             ) : (
-                                driverCategories.find(c => c.id === selectedCatId)?.drivers.map((d) => (
+                                (driverCategories.find(c => c.id === selectedCatId)?.drivers || [])
+                                    .filter((d) => matchesSearch(d.name, d.license, d.team, d.rank, d.points, d.wins))
+                                    .map((d) => (
                                     <div key={d.id} className="page-nav-wrapper" style={{ position: 'relative', marginBottom: '4px' }}>
                                         <button
                                             className={`page-nav-item ${selectedDriverId === d.id ? 'active' : ''}`}
@@ -2250,12 +2276,12 @@ const VisualEditor: React.FC = () => {
                             </button>
                         </div>
                         <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
-                            {videos.length === 0 ? (
+                            {filteredVideos.length === 0 ? (
                                 <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
-                                    Heç bir video əlavə edilməyib.
+                                    {searchQuery ? 'Axtarışa uyğun video tapılmadı.' : 'Heç bir video əlavə edilməyib.'}
                                 </div>
                             ) : (
-                                videos.map((v) => (
+                                filteredVideos.map((v) => (
                                     <div key={v.id} className="page-nav-wrapper" style={{ position: 'relative', marginBottom: '4px' }}>
                                         <button
                                             className={`page-nav-item ${selectedVideoId === v.id ? 'active' : ''}`}
@@ -2385,10 +2411,12 @@ const VisualEditor: React.FC = () => {
                             </button>
                         </div>
                         <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
-                            {galleryPhotos.length === 0 ? (
-                                <p style={{ padding: '20px', color: '#94a3b8', textAlign: 'center', fontSize: '13px' }}>Şəkil yoxdur</p>
+                            {filteredPhotos.length === 0 ? (
+                                <p style={{ padding: '20px', color: '#94a3b8', textAlign: 'center', fontSize: '13px' }}>
+                                    {searchQuery ? 'Axtarışa uyğun şəkil tapılmadı.' : 'Şəkil yoxdur'}
+                                </p>
                             ) : (
-                                galleryPhotos.map((photo) => (
+                                filteredPhotos.map((photo) => (
                                     <div key={photo.id} className="page-nav-wrapper" style={{ position: 'relative', marginBottom: '4px' }}>
                                         <button
                                             className={`page-nav-item ${selectedPhotoId === photo.id ? 'active' : ''}`}
