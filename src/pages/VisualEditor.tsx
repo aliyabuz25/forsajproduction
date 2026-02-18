@@ -3428,30 +3428,42 @@ const VisualEditor: React.FC = () => {
                                             </div>
 
                                             {isMarqueePage && (
-                                                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.9rem', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '10px', background: '#f8fafc' }}>
-                                                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={page.active !== false}
-                                                            onChange={(e) => {
-                                                                const newPages = [...pages];
-                                                                if (!newPages[pageIdx]) return;
-                                                                newPages[pageIdx].active = e.target.checked;
-                                                                setPages(newPages);
-                                                            }}
-                                                        />
-                                                        Marquee aktivdir
-                                                    </label>
-                                                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isMarqueeCollapsed}
-                                                            onChange={(e) => {
-                                                                setGroupedPageCollapsed((prev) => ({ ...prev, [page.id]: e.target.checked }));
-                                                            }}
-                                                        />
-                                                        Paneldə gizlə
-                                                    </label>
+                                                <div className="marquee-control-panel">
+                                                    <div className="marquee-control-item">
+                                                        <div className="marquee-control-copy">
+                                                            <div className="marquee-control-title">Marquee aktivdir</div>
+                                                            <div className="marquee-control-desc">Frontenddə sürüşən yazı göstərilsin</div>
+                                                        </div>
+                                                        <label className="marquee-switch" aria-label="Marquee aktivdir">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={page.active !== false}
+                                                                onChange={(e) => {
+                                                                    const newPages = [...pages];
+                                                                    if (!newPages[pageIdx]) return;
+                                                                    newPages[pageIdx].active = e.target.checked;
+                                                                    setPages(newPages);
+                                                                }}
+                                                            />
+                                                            <span className="marquee-switch-slider" />
+                                                        </label>
+                                                    </div>
+                                                    <div className="marquee-control-item">
+                                                        <div className="marquee-control-copy">
+                                                            <div className="marquee-control-title">Paneldə gizlə</div>
+                                                            <div className="marquee-control-desc">Bu kartı editorda daralt və yadda saxla</div>
+                                                        </div>
+                                                        <label className="marquee-switch" aria-label="Paneldə gizlə">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isMarqueeCollapsed}
+                                                                onChange={(e) => {
+                                                                    setGroupedPageCollapsed((prev) => ({ ...prev, [page.id]: e.target.checked }));
+                                                                }}
+                                                            />
+                                                            <span className="marquee-switch-slider" />
+                                                        </label>
+                                                    </div>
                                                 </div>
                                             )}
 
