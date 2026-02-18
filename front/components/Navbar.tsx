@@ -141,8 +141,19 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
 
       return { name, target, activeView };
     });
+  const dedupedNavItems = navItems.filter((item, index, arr) => {
+    const key = item.target.type === 'view'
+      ? `view:${item.target.view}`
+      : `external:${item.target.url}`;
+    return arr.findIndex((candidate) => {
+      const candidateKey = candidate.target.type === 'view'
+        ? `view:${candidate.target.view}`
+        : `external:${candidate.target.url}`;
+      return candidateKey === key;
+    }) === index;
+  });
 
-  const resolvedNavItems = navItems.length > 0 ? navItems : defaultNavItems;
+  const resolvedNavItems = dedupedNavItems.length > 0 ? dedupedNavItems : defaultNavItems;
 
   const languages = ['AZ', 'RU', 'ENG'];
 
