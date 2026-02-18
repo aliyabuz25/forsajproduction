@@ -40,6 +40,17 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
     const userRole = user?.role || 'secondary';
     const location = useLocation();
 
+    const normalizePath = (path?: string) => {
+        if (!path) return path;
+        if (path === '/frontend-settings' || path === '/admin/frontend-settings') {
+            return '/general-settings?tab=general';
+        }
+        if (path === '/general-settings' || path === '/admin/general-settings') {
+            return '/general-settings?tab=general';
+        }
+        return path;
+    };
+
     const iconMap: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
         Layout,
         Home,
@@ -74,18 +85,19 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
 
     // Better active check including query params
     const isCurrentActive = (path?: string) => {
-        if (!path) return false;
-        if (path.includes('?')) {
-            return (location.pathname + location.search) === path;
+        const normalizedPath = normalizePath(path);
+        if (!normalizedPath) return false;
+        if (normalizedPath.includes('?')) {
+            return (location.pathname + location.search) === normalizedPath;
         }
-        return location.pathname === path;
+        return location.pathname === normalizedPath;
     };
 
     const renderLinkItem = (item: SidebarItem, parentIcon?: string, forcedPath?: string) => (
         <li key={item.title} className="sidebar-item">
             <NavLink
-                to={forcedPath || item.path || '#'}
-                className={() => `sidebar-link ${isCurrentActive(forcedPath || item.path) ? 'active' : ''}`}
+                to={normalizePath(forcedPath || item.path) || '#'}
+                className={() => `sidebar-link ${isCurrentActive(normalizePath(forcedPath || item.path)) ? 'active' : ''}`}
             >
                 {(item.icon || parentIcon) && <IconComponent name={item.icon || parentIcon || ''} className="sidebar-icon" />}
                 <span className="sidebar-text">{item.title}</span>
@@ -104,20 +116,39 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
         const filtered = items
             .map((item) => {
                 const children = item.children ? filterByRole(item.children) : undefined;
+                const normalizedPath = normalizePath(item.path);
 
                 if (userRole === 'secondary') {
-                    const isRestricted = restrictedPaths.some(p => item.path?.toLowerCase() === p);
+                    const isRestricted = restrictedPaths.some(p => normalizedPath?.toLowerCase().startsWith(p));
                     if (isRestricted) return null;
                 }
 
                 // If parent has no direct path and all children are filtered out, hide it.
-                if (!item.path && (!children || children.length === 0)) return null;
+                if (!normalizedPath && (!children || children.length === 0)) return null;
 
-                return { ...item, children };
+                return { ...item, path: normalizedPath, children };
             })
             .filter(Boolean) as SidebarItem[];
 
         return filtered;
+    };
+
+    const dedupeMenuItems = (items: SidebarItem[]) => {
+        const seenTitles = new Set<string>();
+        const normalizeText = (value: string) =>
+            (value || '')
+                .toLocaleLowerCase('az')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim();
+
+        return items.filter((item) => {
+            const key = normalizeText(item.title || '');
+            if (!key) return false;
+            if (seenTitles.has(key)) return false;
+            seenTitles.add(key);
+            return true;
+        });
     };
 
     return (
@@ -132,7 +163,7 @@ const Sidebar: React.FC<SidebarProps> = ({ menuItems, user, onLogout }) => {
             <div className="sidebar-content">
                 <div className="sidebar-section-label">ƏSAS NAVİQASİYA</div>
                 <ul className="sidebar-menu">
-                    {filterByRole(menuItems).map(item => {
+                    {dedupeMenuItems(filterByRole(menuItems)).map(item => {
                         const fallbackChildPath = item.children?.find(child => !!child.path)?.path;
                         return renderLinkItem(item, item.icon, item.path || fallbackChildPath);
                     })}

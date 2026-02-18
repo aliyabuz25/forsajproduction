@@ -60,6 +60,23 @@ const prettifyItem = (item: SidebarItem): SidebarItem => {
   };
 };
 
+const sanitizeMenuPath = (path?: string) => {
+  if (!path) return path;
+  if (path === '/frontend-settings' || path === '/admin/frontend-settings') {
+    return '/general-settings?tab=general';
+  }
+  if (path === '/general-settings' || path === '/admin/general-settings') {
+    return '/general-settings?tab=general';
+  }
+  return path;
+};
+
+const sanitizeSitemapItem = (item: SidebarItem): SidebarItem => ({
+  ...item,
+  path: sanitizeMenuPath(item.path),
+  children: item.children?.map(sanitizeSitemapItem),
+});
+
 const mergeChildren = (children: SidebarItem[] = []) => {
   const merged = new Map<string, SidebarItem>();
   children.forEach((child) => {
@@ -72,11 +89,13 @@ const mergeChildren = (children: SidebarItem[] = []) => {
 
 const isSystemSettingsItem = (item: SidebarItem) => {
   const titleKey = normalizeText(item?.title || '');
-  const pathKey = normalizeText((item as any)?.path || '');
+  const pathKey = normalizeText(sanitizeMenuPath((item as any)?.path) || '');
   return (
     titleKey === 'sistem ayarlari' ||
     pathKey === '/frontend-settings' ||
+    pathKey === '/admin/frontend-settings' ||
     pathKey === '/general-settings' ||
+    pathKey === '/admin/general-settings' ||
     pathKey.startsWith('/general-settings?')
   );
 };
@@ -143,7 +162,9 @@ const App: React.FC = () => {
           const data = await response.json();
           let items = Array.isArray(data) ? data : [];
 
-          items = items.map((item: SidebarItem) => prettifyItem(item));
+          items = items
+            .map((item: SidebarItem) => prettifyItem(item))
+            .map((item: SidebarItem) => sanitizeSitemapItem(item));
 
           // Inject "Müraciətlər" item if not present
           const hasApplications = items.find((i: any) => i.path === '/applications');
