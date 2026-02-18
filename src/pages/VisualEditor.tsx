@@ -326,6 +326,7 @@ const VisualEditor: React.FC = () => {
 
     const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhotoItem[]>([]);
     const autoSyncTriggeredRef = useRef(false);
+    const aboutStatsPatchedRef = useRef(false);
     const [selectedPhotoId, setSelectedPhotoId] = useState<number | null>(null);
     const [photoForm, setPhotoForm] = useState<Partial<GalleryPhotoItem>>({});
 
@@ -647,6 +648,54 @@ const VisualEditor: React.FC = () => {
     useEffect(() => {
         loadContent();
     }, []);
+
+    useEffect(() => {
+        if (aboutStatsPatchedRef.current) return;
+        if (!pages.length) return;
+
+        const aboutIdx = pages.findIndex((p) => p.id === 'about');
+        if (aboutIdx === -1) return;
+
+        const aboutPage = pages[aboutIdx];
+        const hasStatPairs = (aboutPage.sections || []).some((s) => isStatSectionId(s.id));
+        if (hasStatPairs) {
+            aboutStatsPatchedRef.current = true;
+            return;
+        }
+
+        const defaults = [
+            { label: 'PİLOTLAR', value: '140+' },
+            { label: 'YARIŞLAR', value: '50+' },
+            { label: 'GƏNCLƏR', value: '20+' }
+        ];
+
+        const patched = [...pages];
+        const target = { ...patched[aboutIdx] };
+        const sections = [...(target.sections || [])];
+
+        defaults.forEach((item, index) => {
+            const suffix = `${index + 1}`;
+            sections.push(
+                {
+                    id: `${STAT_LABEL_PREFIX}${suffix}`,
+                    type: 'text',
+                    label: `Statistika Etiketi ${index + 1}`,
+                    value: item.label
+                },
+                {
+                    id: `${STAT_VALUE_PREFIX}${suffix}`,
+                    type: 'text',
+                    label: `Statistika Dəyəri ${index + 1}`,
+                    value: item.value
+                }
+            );
+        });
+
+        target.sections = sections;
+        patched[aboutIdx] = target;
+        aboutStatsPatchedRef.current = true;
+        setPages(patched);
+    }, [pages]);
 
     useEffect(() => {
         if (autoSyncTriggeredRef.current) return;
