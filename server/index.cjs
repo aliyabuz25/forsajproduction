@@ -515,6 +515,32 @@ const resolveGeneralSettingValue = (siteContent, key, fallback = '') => {
     return value || fallback;
 };
 
+const resolveGeneralImagePath = (siteContent, key, fallback = '') => {
+    if (!Array.isArray(siteContent)) return fallback;
+    const generalPage = siteContent.find((page) => String(page?.id || '').trim().toLowerCase() === 'general');
+    if (!generalPage || !Array.isArray(generalPage.images)) return fallback;
+    const target = generalPage.images.find((image) => normalizeSettingId(image?.id) === normalizeSettingId(key));
+    const value = String(target?.path || '').trim();
+    return value || fallback;
+};
+
+const getOriginFromUrl = (value) => {
+    try {
+        return new URL(value).origin;
+    } catch {
+        return '';
+    }
+};
+
+const toAbsoluteUrlWithBase = (baseUrl, rawPath) => {
+    const value = String(rawPath || '').trim();
+    if (!value) return '';
+    if (/^https?:\/\//i.test(value)) return value;
+    const base = String(baseUrl || '').trim();
+    if (!base) return value;
+    return `${base}${value.startsWith('/') ? value : `/${value}`}`;
+};
+
 const resolveSmtpSettings = async () => {
     const siteContent = await getContent('site-content', []);
 
@@ -531,6 +557,11 @@ const resolveSmtpSettings = async () => {
         'SMTP_TO',
         process.env.SMTP_TO || resolveGeneralSettingValue(siteContent, 'CONTACT_EMAIL', process.env.NOTIFICATION_EMAIL || '')
     );
+    const siteName = resolveGeneralSettingValue(siteContent, 'SEO_TITLE', process.env.SITE_NAME || 'Forsaj Club');
+    const canonicalUrl = resolveGeneralSettingValue(siteContent, 'SEO_CANONICAL_URL', process.env.SITE_URL || '');
+    const siteOrigin = getOriginFromUrl(canonicalUrl) || process.env.SITE_ORIGIN || '';
+    const logoPath = resolveGeneralImagePath(siteContent, 'SITE_LOGO_LIGHT', process.env.SITE_LOGO_URL || '');
+    const logoUrl = toAbsoluteUrlWithBase(siteOrigin, logoPath);
 
     return {
         enabled,
@@ -540,22 +571,42 @@ const resolveSmtpSettings = async () => {
         user,
         pass,
         from,
-        toList: to.split(',').map((entry) => entry.trim()).filter(Boolean)
+        toList: to.split(',').map((entry) => entry.trim()).filter(Boolean),
+        siteName,
+        siteUrl: canonicalUrl,
+        logoUrl
     };
 };
 
 const formatApplicationMailContent = (content) => {
     const trimmed = String(content || '').trim();
-    if (!trimmed) return 'Məzmun boşdur.';
+    if (!trimmed) return { text: 'Məzmun boşdur.', html: '<p style="margin:0;color:#111827;">Məzmun boşdur.</p>' };
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
         try {
             const parsed = JSON.parse(trimmed);
-            return JSON.stringify(parsed, null, 2);
+            if (Array.isArray(parsed)) {
+                const text = JSON.stringify(parsed, null, 2);
+                return { text, html: `<pre style="margin:0;white-space:pre-wrap;color:#111827;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">${escapeHtml(text)}</pre>` };
+            }
+            if (isPlainObject(parsed)) {
+                const rows = Object.entries(parsed).map(([key, value]) => {
+                    const safeKey = escapeHtml(key);
+                    const safeValue = escapeHtml(String(value ?? ''));
+                    return `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px;width:160px;vertical-align:top;">${safeKey}</td><td style="padding:8px 0;color:#111827;font-size:14px;font-weight:600;word-break:break-word;">${safeValue}</td></tr>`;
+                }).join('');
+                const text = Object.entries(parsed).map(([key, value]) => `${key}: ${String(value ?? '')}`).join('\n');
+                return {
+                    text,
+                    html: `<table role="presentation" cellpadding="0" cellspacing="0" width="100%">${rows}</table>`
+                };
+            }
+            const text = String(parsed);
+            return { text, html: `<p style="margin:0;color:#111827;">${escapeHtml(text)}</p>` };
         } catch {
-            return trimmed;
+            return { text: trimmed, html: `<pre style="margin:0;white-space:pre-wrap;color:#111827;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">${escapeHtml(trimmed)}</pre>` };
         }
     }
-    return trimmed;
+    return { text: trimmed, html: `<p style="margin:0;color:#111827;">${escapeHtml(trimmed)}</p>` };
 };
 
 const sendApplicationNotificationEmail = async ({ name, contact, type, content }) => {
@@ -572,10 +623,10 @@ const sendApplicationNotificationEmail = async ({ name, contact, type, content }
 
     const formattedContent = formatApplicationMailContent(content);
     const createdAt = new Date().toISOString();
-    const subject = `[Forsaj] Yeni müraciət: ${type}`;
+    const subject = `[${smtp.siteName || 'Forsaj'}] Yeni müraciət: ${type}`;
 
     const textBody = [
-        'Yeni form müraciəti daxil oldu.',
+        `${smtp.siteName || 'Forsaj Club'} - Yeni form müraciəti`,
         '',
         `Ad: ${name}`,
         `Əlaqə: ${contact}`,
@@ -583,14 +634,64 @@ const sendApplicationNotificationEmail = async ({ name, contact, type, content }
         `Tarix: ${createdAt}`,
         '',
         'Məzmun:',
-        formattedContent
+        formattedContent.text
     ].join('\n');
+
+    const siteUrlText = String(smtp.siteUrl || '').trim();
+    const safeName = escapeHtml(name);
+    const safeContact = escapeHtml(contact);
+    const safeType = escapeHtml(type);
+    const safeDate = escapeHtml(createdAt);
+    const safeSiteName = escapeHtml(smtp.siteName || 'Forsaj Club');
+    const safeSiteUrl = escapeHtml(siteUrlText);
+    const headerLogo = smtp.logoUrl
+        ? `<img src="${escapeHtml(smtp.logoUrl)}" alt="${safeSiteName}" style="max-height:44px;width:auto;display:block;" />`
+        : `<div style="font-size:22px;font-weight:900;letter-spacing:0.02em;color:#111827;">${safeSiteName}</div>`;
+
+    const htmlBody = `
+      <div style="background:#f3f4f6;padding:24px 0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:680px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb;">
+          <tr>
+            <td style="background:#111827;padding:22px 28px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td>${headerLogo}</td>
+                  <td style="text-align:right;color:#9ca3af;font-size:12px;">Yeni form müraciəti</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px;">
+              <h2 style="margin:0 0 18px;font-size:22px;line-height:1.3;color:#111827;">Yeni müraciət daxil oldu</h2>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:18px;">
+                <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;width:140px;">Ad</td><td style="padding:8px 0;color:#111827;font-size:14px;font-weight:700;">${safeName}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;width:140px;">Əlaqə</td><td style="padding:8px 0;color:#111827;font-size:14px;font-weight:700;">${safeContact}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;width:140px;">Növ</td><td style="padding:8px 0;color:#111827;font-size:14px;font-weight:700;">${safeType}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;width:140px;">Tarix</td><td style="padding:8px 0;color:#111827;font-size:14px;font-weight:700;">${safeDate}</td></tr>
+              </table>
+
+              <div style="margin-top:6px;border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fafafa;">
+                <div style="font-size:12px;font-weight:800;letter-spacing:0.08em;color:#6b7280;text-transform:uppercase;margin-bottom:10px;">Müraciət Məzmunu</div>
+                ${formattedContent.html}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:14px 28px;color:#6b7280;font-size:12px;">
+              ${safeSiteName}${siteUrlText ? ` • <a href="${safeSiteUrl}" style="color:#374151;text-decoration:none;">${safeSiteUrl}</a>` : ''}
+            </td>
+          </tr>
+        </table>
+      </div>
+    `;
 
     await transport.sendMail({
         from: smtp.from || smtp.user,
         to: smtp.toList.join(', '),
         subject,
-        text: textBody
+        text: textBody,
+        html: htmlBody
     });
 
     return { sent: true };
