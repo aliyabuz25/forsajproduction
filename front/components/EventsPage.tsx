@@ -16,6 +16,9 @@ interface EventItem {
   img: string;
   description?: string;
   rules?: string;
+  youtubeUrl?: string;
+  youtube_url?: string;
+  url?: string;
   pdfUrl?: string;
   pdf_url?: string;
   pdfURL?: string;
@@ -80,9 +83,13 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
 
         if (eventsRes.ok) {
           const data = await eventsRes.json();
-          // Sort by date descending
           if (Array.isArray(data)) {
-            const sortedEvents = data.sort((a: any, b: any) =>
+            const normalizedEvents = data.map((item: any) => ({
+              ...item,
+              status: normalizeEventStatus(item?.status, item?.date),
+              youtubeUrl: String(item?.youtubeUrl || item?.youtube_url || item?.url || '').trim()
+            }));
+            const sortedEvents = normalizedEvents.sort((a: any, b: any) =>
               new Date(b.date).getTime() - new Date(a.date).getTime()
             );
             setEventsData(sortedEvents as any);
@@ -580,34 +587,50 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
               </div>
             ) : (
               pastEvents.map((event) => (
-                <div
-                  key={event.id}
-                  onClick={() => setSelectedEvent(event)}
-                  className="group relative cursor-pointer aspect-[4/5] bg-[#111] border border-white/5 overflow-hidden rounded-sm hover:border-[#FF4D00]/40 transition-all shadow-xl"
-                >
-                  <img
-                    src={event.img}
-                    className="w-full h-full object-cover grayscale opacity-40 transition-all duration-700 group-hover:grayscale-0 group-hover:opacity-90 group-hover:scale-105"
-                    alt={event.title}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                (() => {
+                  const videoId = extractYoutubeId(event.youtubeUrl || '');
+                  const previewImage = event.img
+                    || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=2070&auto=format&fit=crop');
 
-                  <div className="absolute top-5 left-5 bg-white text-black px-4 py-1.5 font-black italic text-[9px] transform -skew-x-12 shadow-lg">
-                    <span className="transform skew-x-12 block uppercase tracking-[0.2em]">
-                      {getText('STATUS_PAST', 'BAŞA ÇATIB')}
-                    </span>
-                  </div>
+                  return (
+                    <div
+                      key={event.id}
+                      onClick={() => {
+                        if (videoId) {
+                          setPlayingVideoId(videoId);
+                          return;
+                        }
+                        setSelectedEvent(event);
+                      }}
+                      className="group relative cursor-pointer aspect-[4/5] bg-[#111] border border-white/5 overflow-hidden rounded-sm hover:border-[#FF4D00]/40 transition-all shadow-xl"
+                    >
+                      <img
+                        src={previewImage}
+                        className="w-full h-full object-cover grayscale opacity-40 transition-all duration-700 group-hover:grayscale-0 group-hover:opacity-90 group-hover:scale-105"
+                        alt={event.title}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
 
-                  <div className="absolute bottom-8 left-8 right-8">
-                    <div className="text-gray-400 font-black italic text-[10px] mb-2 uppercase tracking-widest">{event.date}</div>
-                    <h4 className="text-3xl font-black italic text-white uppercase leading-none tracking-tighter group-hover:text-[#FF4D00] transition-colors">
-                      {event.title}
-                    </h4>
-                    <div className="mt-6 bg-white/5 border border-white/10 text-white px-5 py-2 font-black italic text-[8px] inline-block transform -skew-x-12 group-hover:bg-[#FF4D00] group-hover:text-black transition-all">
-                      <span className="transform skew-x-12 block uppercase tracking-[0.2em]">{getText('BTN_VIEW_DETAILS', 'ƏTRAFLI BAX')}</span>
+                      <div className="absolute top-5 left-5 bg-white text-black px-4 py-1.5 font-black italic text-[9px] transform -skew-x-12 shadow-lg">
+                        <span className="transform skew-x-12 block uppercase tracking-[0.2em]">
+                          {getText('STATUS_PAST', 'BAŞA ÇATIB')}
+                        </span>
+                      </div>
+
+                      <div className="absolute bottom-8 left-8 right-8">
+                        <div className="text-gray-400 font-black italic text-[10px] mb-2 uppercase tracking-widest">{event.date}</div>
+                        <h4 className="text-3xl font-black italic text-white uppercase leading-none tracking-tighter group-hover:text-[#FF4D00] transition-colors">
+                          {event.title}
+                        </h4>
+                        <div className="mt-6 bg-white/5 border border-white/10 text-white px-5 py-2 font-black italic text-[8px] inline-block transform -skew-x-12 group-hover:bg-[#FF4D00] group-hover:text-black transition-all">
+                          <span className="transform skew-x-12 block uppercase tracking-[0.2em]">
+                            {videoId ? getText('BTN_WATCH_VIDEO', 'VİDEONU OYNAT') : getText('BTN_VIEW_DETAILS', 'ƏTRAFLI BAX')}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })()
               ))
             )}
           </div>
@@ -647,3 +670,16 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
 };
 
 export default EventsPage;
+  const normalizeEventStatus = (rawStatus: unknown, rawDate?: string): 'planned' | 'past' => {
+    const normalized = String(rawStatus || '').trim().toLocaleLowerCase('az');
+    if (normalized === 'past' || normalized === 'kecmis' || normalized === 'keçmiş') return 'past';
+    if (normalized === 'planned' || normalized === 'gelecek' || normalized === 'gələcək') return 'planned';
+
+    const date = new Date(String(rawDate || '').trim());
+    if (!Number.isNaN(date.getTime())) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (date.getTime() < today.getTime()) return 'past';
+    }
+    return 'planned';
+  };

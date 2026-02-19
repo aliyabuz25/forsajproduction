@@ -40,6 +40,7 @@ interface EventItem {
     img: string;
     description: string;
     rules: string;
+    youtubeUrl?: string;
     pdfUrl?: string;
     status: 'planned' | 'past';
 }
@@ -112,6 +113,20 @@ const RESERVED_PHOTO_ALBUM_KEYS = new Set([
 const normalizePhotoAlbum = (value?: string) => {
     const cleaned = (value || '').trim();
     return cleaned || DEFAULT_PHOTO_ALBUM;
+};
+
+const normalizeEventStatus = (rawStatus: unknown, rawDate?: string): 'planned' | 'past' => {
+    const normalized = String(rawStatus || '').trim().toLocaleLowerCase('az');
+    if (normalized === 'past' || normalized === 'kecmis' || normalized === 'keçmiş') return 'past';
+    if (normalized === 'planned' || normalized === 'gelecek' || normalized === 'gələcək') return 'planned';
+
+    const date = new Date(String(rawDate || '').trim());
+    if (!Number.isNaN(date.getTime())) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (date.getTime() < today.getTime()) return 'past';
+    }
+    return 'planned';
 };
 
 const isReservedPhotoAlbum = (value?: string) => {
@@ -1368,10 +1383,15 @@ const VisualEditor: React.FC = () => {
             if (imagesData?.local) setAllAvailableImages(imagesData.local);
 
             if (Array.isArray(eventsData)) {
-                setEvents(eventsData);
-                if (eventsData.length > 0 && selectedEventId === null) {
-                    setSelectedEventId(eventsData[0].id);
-                    setEventForm(eventsData[0]);
+                const normalizedEvents = eventsData.map((item: any) => ({
+                    ...item,
+                    status: normalizeEventStatus(item?.status, item?.date),
+                    youtubeUrl: String(item?.youtubeUrl || item?.youtube_url || item?.url || '').trim()
+                }));
+                setEvents(normalizedEvents);
+                if (normalizedEvents.length > 0 && selectedEventId === null) {
+                    setSelectedEventId(normalizedEvents[0].id);
+                    setEventForm(normalizedEvents[0]);
                 }
             }
 
@@ -2460,6 +2480,7 @@ const VisualEditor: React.FC = () => {
             img: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=2070&auto=format&fit=crop',
             description: '',
             rules: '',
+            youtubeUrl: '',
             status: 'planned'
         };
         setEvents([...events, newEvent]);
@@ -3935,91 +3956,108 @@ const VisualEditor: React.FC = () => {
                                         <label>VƏZİYYƏT</label>
                                         <select
                                             value={eventForm.status}
-                                            onChange={(e) => handleEventChange('status', e.target.value, eventForm.id)}
+                                            onChange={(e) => handleEventChange('status', normalizeEventStatus(e.target.value, eventForm.date), eventForm.id)}
                                         >
                                             <option value="planned">Gələcək</option>
                                             <option value="past">Keçmiş</option>
                                         </select>
                                     </div>
-                                    <div className="form-group full-span">
-                                        <label>ŞƏKİL</label>
-                                        <div style={{ width: '100%', height: '180px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#f8fafc', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            {eventForm.img ? (
-                                                <img src={eventForm.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            ) : (
-                                                <span style={{ color: '#94a3b8', fontSize: '12px' }}>Şəkil seçilməyib</span>
-                                            )}
-                                        </div>
-                                        <div className="input-row">
+                                    {eventForm.status === 'past' ? (
+                                        <div className="form-group full-span">
+                                            <label>YOUTUBE LİNKİ</label>
                                             <input
                                                 type="text"
-                                                value={eventForm.img}
-                                                onChange={(e) => handleEventChange('img', e.target.value, eventForm.id)}
+                                                value={eventForm.youtubeUrl || ''}
+                                                onChange={(e) => handleEventChange('youtubeUrl', e.target.value, eventForm.id)}
+                                                placeholder="https://www.youtube.com/watch?v=..."
                                             />
-                                            <input
-                                                type="file"
-                                                id="event-full-img"
-                                                style={{ display: 'none' }}
-                                                onChange={async (e) => {
-                                                    const f = e.target.files?.[0];
-                                                    if (f) {
-                                                        const url = await uploadImage(f);
-                                                        if (url) handleEventChange('img', url, eventForm.id);
-                                                    }
-                                                }}
-                                            />
-                                            <button onClick={() => document.getElementById('event-full-img')?.click()} className="btn-secondary">Yüklə</button>
+                                            <div style={{ marginTop: '8px', fontSize: '12px', color: '#64748b' }}>
+                                                Keçmiş tədbir üçün yalnız tədbir adı və YouTube linki kifayətdir.
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="form-group full-span">
-                                        <label>TƏSVİR</label>
-                                        <QuillEditor
-                                            id="event-full-desc"
-                                            value={bbcodeToHtmlForEditor(eventForm.description || '')}
-                                            onChange={(val: string) => handleEventChange('description', val, eventForm.id)}
-                                        />
-                                    </div>
-                                    <div className="form-group full-span">
-                                        <label>PDF URL</label>
-                                        <div className="input-row">
-                                            <input
-                                                type="text"
-                                                value={eventForm.pdfUrl || ''}
-                                                onChange={(e) => handleEventChange('pdfUrl', e.target.value, eventForm.id)}
-                                                placeholder="https://.../rules.pdf"
-                                            />
-                                            <input
-                                                type="file"
-                                                id="event-full-pdf"
-                                                accept=".pdf,application/pdf"
-                                                style={{ display: 'none' }}
-                                                onChange={async (e) => {
-                                                    const f = e.target.files?.[0];
-                                                    if (!f) return;
-                                                    if (f.type !== 'application/pdf' && !f.name.toLowerCase().endsWith('.pdf')) {
-                                                        toast.error('Yalnız PDF faylı yüklənə bilər');
-                                                        return;
-                                                    }
-                                                    const url = await uploadAsset(f, {
-                                                        loadingText: 'PDF yüklənir...',
-                                                        successText: 'PDF uğurla yükləndi',
-                                                        errorText: 'PDF yüklənərkən xəta baş verdi'
-                                                    });
-                                                    if (url) handleEventChange('pdfUrl', url, eventForm.id);
-                                                    (e.target as HTMLInputElement).value = '';
-                                                }}
-                                            />
-                                            <button type="button" onClick={() => document.getElementById('event-full-pdf')?.click()} className="btn-secondary">PDF Yüklə</button>
-                                        </div>
-                                    </div>
-                                    <div className="form-group full-span">
-                                        <label>QAYDALAR</label>
-                                        <QuillEditor
-                                            id="event-full-rules"
-                                            value={bbcodeToHtmlForEditor(eventForm.rules || '')}
-                                            onChange={(val: string) => handleEventChange('rules', val, eventForm.id)}
-                                        />
-                                    </div>
+                                    ) : (
+                                        <>
+                                            <div className="form-group full-span">
+                                                <label>ŞƏKİL</label>
+                                                <div style={{ width: '100%', height: '180px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#f8fafc', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {eventForm.img ? (
+                                                        <img src={eventForm.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <span style={{ color: '#94a3b8', fontSize: '12px' }}>Şəkil seçilməyib</span>
+                                                    )}
+                                                </div>
+                                                <div className="input-row">
+                                                    <input
+                                                        type="text"
+                                                        value={eventForm.img}
+                                                        onChange={(e) => handleEventChange('img', e.target.value, eventForm.id)}
+                                                    />
+                                                    <input
+                                                        type="file"
+                                                        id="event-full-img"
+                                                        style={{ display: 'none' }}
+                                                        onChange={async (e) => {
+                                                            const f = e.target.files?.[0];
+                                                            if (f) {
+                                                                const url = await uploadImage(f);
+                                                                if (url) handleEventChange('img', url, eventForm.id);
+                                                            }
+                                                        }}
+                                                    />
+                                                    <button onClick={() => document.getElementById('event-full-img')?.click()} className="btn-secondary">Yüklə</button>
+                                                </div>
+                                            </div>
+                                            <div className="form-group full-span">
+                                                <label>TƏSVİR</label>
+                                                <QuillEditor
+                                                    id="event-full-desc"
+                                                    value={bbcodeToHtmlForEditor(eventForm.description || '')}
+                                                    onChange={(val: string) => handleEventChange('description', val, eventForm.id)}
+                                                />
+                                            </div>
+                                            <div className="form-group full-span">
+                                                <label>PDF URL</label>
+                                                <div className="input-row">
+                                                    <input
+                                                        type="text"
+                                                        value={eventForm.pdfUrl || ''}
+                                                        onChange={(e) => handleEventChange('pdfUrl', e.target.value, eventForm.id)}
+                                                        placeholder="https://.../rules.pdf"
+                                                    />
+                                                    <input
+                                                        type="file"
+                                                        id="event-full-pdf"
+                                                        accept=".pdf,application/pdf"
+                                                        style={{ display: 'none' }}
+                                                        onChange={async (e) => {
+                                                            const f = e.target.files?.[0];
+                                                            if (!f) return;
+                                                            if (f.type !== 'application/pdf' && !f.name.toLowerCase().endsWith('.pdf')) {
+                                                                toast.error('Yalnız PDF faylı yüklənə bilər');
+                                                                return;
+                                                            }
+                                                            const url = await uploadAsset(f, {
+                                                                loadingText: 'PDF yüklənir...',
+                                                                successText: 'PDF uğurla yükləndi',
+                                                                errorText: 'PDF yüklənərkən xəta baş verdi'
+                                                            });
+                                                            if (url) handleEventChange('pdfUrl', url, eventForm.id);
+                                                            (e.target as HTMLInputElement).value = '';
+                                                        }}
+                                                    />
+                                                    <button type="button" onClick={() => document.getElementById('event-full-pdf')?.click()} className="btn-secondary">PDF Yüklə</button>
+                                                </div>
+                                            </div>
+                                            <div className="form-group full-span">
+                                                <label>QAYDALAR</label>
+                                                <QuillEditor
+                                                    id="event-full-rules"
+                                                    value={bbcodeToHtmlForEditor(eventForm.rules || '')}
+                                                    onChange={(val: string) => handleEventChange('rules', val, eventForm.id)}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div className="editor-savebar">
