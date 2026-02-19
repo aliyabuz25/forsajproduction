@@ -1025,6 +1025,10 @@ const VisualEditor: React.FC = () => {
                     ensurePageSectionDefaults(page, [
                         { id: 'PAGE_TITLE', label: 'Səhifə Başlığı', value: 'TƏDBİRLƏR' },
                         { id: 'PAGE_SUBTITLE', label: 'Səhifə Alt Başlığı', value: 'OFFICIAL EVENT CALENDAR // FORSAJ CLUB' },
+                        { id: 'BTN_JOIN_EVENT', label: 'Tədbirə Qoşul Düyməsi', value: 'TƏDBİRƏ QOŞUL' },
+                        { id: 'SIDEBAR_QUESTION_TITLE', label: 'Sual Kartı Başlığı', value: 'SUALINIZ VAR?' },
+                        { id: 'SIDEBAR_QUESTION_DESC', label: 'Sual Kartı Təsviri', value: 'YARIŞLA BAĞLI ƏLAVƏ SUALLARINIZ ÜÇÜN BİZİMLƏ ƏLAQƏ SAXLAYIN.' },
+                        { id: 'BTN_CONTACT', label: 'Sual Kartı Əlaqə Düyməsi', value: 'ƏLAQƏ' },
                         { id: 'PILOT_FORM_TOAST_REQUIRED', label: 'Pilot Form Boş Sahə Xəbərdarlığı', value: 'Zəhmət olmasa bütün sahələri doldurun.' },
                         { id: 'PILOT_FORM_TOAST_SUCCESS', label: 'Pilot Form Uğurlu Göndəriş Mesajı', value: 'Qeydiyyat müraciətiniz uğurla göndərildi!' },
                         { id: 'PILOT_FORM_TOAST_ERROR', label: 'Pilot Form Xəta Mesajı', value: 'Gondərilmə zamanı xəta baş verdi.' },
@@ -3045,6 +3049,12 @@ const VisualEditor: React.FC = () => {
         if (!searchQuery) return true;
         return values.some((value) => (value || '').toString().toLowerCase().includes(searchQuery));
     };
+    const eventsPageIndex = pages.findIndex((page) => page.id === 'eventspage');
+    const eventsPageConfig = eventsPageIndex >= 0 ? pages[eventsPageIndex] : null;
+    const getEventsPageConfigValue = (key: string, fallback: string) => {
+        const found = eventsPageConfig?.sections?.find((section) => section.id === key);
+        return (found?.value || fallback).toString();
+    };
 
     const displayedSections = (currentPage?.sections || []).filter(s => {
         if (!isSectionVisibleInAdmin(s)) return false;
@@ -3859,6 +3869,61 @@ const VisualEditor: React.FC = () => {
 
                                 <div className="editor-savebar">
                                     <button className="btn-primary" onClick={saveChanges}>Yadda Saxla</button>
+                                </div>
+
+                                <div className="edit-grid grid-2" style={{ marginTop: '1.25rem' }}>
+                                    <div className="form-group full-span" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', background: '#f8fafc' }}>
+                                        <label style={{ color: '#0f172a' }}>SECTION 1: TƏDBİRƏ QOŞUL DÜYMƏSİ</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('BTN_JOIN_EVENT', 'TƏDBİRƏ QOŞUL')}
+                                            onChange={(e) => {
+                                                if (eventsPageIndex < 0) return;
+                                                handleSectionChange(eventsPageIndex, 'BTN_JOIN_EVENT', 'value', e.target.value);
+                                            }}
+                                            placeholder="TƏDBİRƏ QOŞUL"
+                                        />
+                                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#64748b' }}>
+                                            Tədbir detalında böyük narıncı düymənin mətnini buradan dəyişin.
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group full-span" style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', background: '#f8fafc' }}>
+                                        <label style={{ color: '#0f172a' }}>SECTION 2: SUALINIZ VAR KARTI</label>
+                                        <div style={{ display: 'grid', gap: '10px' }}>
+                                            <input
+                                                type="text"
+                                                value={getEventsPageConfigValue('SIDEBAR_QUESTION_TITLE', 'SUALINIZ VAR?')}
+                                                onChange={(e) => {
+                                                    if (eventsPageIndex < 0) return;
+                                                    handleSectionChange(eventsPageIndex, 'SIDEBAR_QUESTION_TITLE', 'value', e.target.value);
+                                                }}
+                                                placeholder="SUALINIZ VAR?"
+                                            />
+                                            <textarea
+                                                rows={3}
+                                                value={getEventsPageConfigValue('SIDEBAR_QUESTION_DESC', 'YARIŞLA BAĞLI ƏLAVƏ SUALLARINIZ ÜÇÜN BİZİMLƏ ƏLAQƏ SAXLAYIN.')}
+                                                onChange={(e) => {
+                                                    if (eventsPageIndex < 0) return;
+                                                    handleSectionChange(eventsPageIndex, 'SIDEBAR_QUESTION_DESC', 'value', e.target.value);
+                                                }}
+                                                placeholder="Kart təsviri"
+                                                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', lineHeight: 1.4, resize: 'vertical' }}
+                                            />
+                                            <input
+                                                type="text"
+                                                value={getEventsPageConfigValue('BTN_CONTACT', 'ƏLAQƏ')}
+                                                onChange={(e) => {
+                                                    if (eventsPageIndex < 0) return;
+                                                    handleSectionChange(eventsPageIndex, 'BTN_CONTACT', 'value', e.target.value);
+                                                }}
+                                                placeholder="ƏLAQƏ"
+                                            />
+                                        </div>
+                                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#64748b' }}>
+                                            Sağ tərəfdəki “Sualınız var?” kartının başlıq, təsvir və düymə mətnləri.
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
