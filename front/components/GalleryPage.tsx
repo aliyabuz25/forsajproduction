@@ -51,6 +51,9 @@ const GalleryPage: React.FC = () => {
   const { getText } = useSiteContent('gallerypage');
   const lightboxRef = useRef<any>(null);
   const lightboxReadyRef = useRef(false);
+  const isLightboxOpenRef = useRef(false);
+  const photosSignatureRef = useRef('');
+  const videosSignatureRef = useRef('');
 
   const preparedPhotos = useMemo<PreparedPhoto[]>(() => {
     if (!Array.isArray(dynamicPhotos)) return [];
@@ -142,16 +145,33 @@ const GalleryPage: React.FC = () => {
     return match ? match[1] : null;
   };
 
+  const buildPhotosSignature = (photos: any[]) =>
+    photos
+      .map((item) => `${item?.id ?? ''}|${item?.url ?? item?.path ?? ''}|${item?.title ?? item?.alt ?? ''}|${item?.album ?? item?.event ?? ''}`)
+      .join('||');
+
+  const buildVideosSignature = (videos: any[]) =>
+    videos
+      .map((item) => `${item?.id ?? ''}|${item?.videoId ?? item?.video_id ?? ''}|${item?.youtubeUrl ?? item?.url ?? ''}|${item?.thumbnail ?? ''}|${item?.duration ?? ''}`)
+      .join('||');
+
   useEffect(() => {
     let mounted = true;
 
     const loadGallery = async () => {
+      if (isLightboxOpenRef.current) return;
       try {
         const stamp = Date.now();
         const photosRes = await fetch(`/api/gallery-photos?v=${stamp}`, { cache: 'no-store' });
         if (photosRes.ok) {
           const photos = await photosRes.json();
-          if (photos && mounted) setDynamicPhotos(photos);
+          if (photos && mounted) {
+            const nextSignature = buildPhotosSignature(Array.isArray(photos) ? photos : []);
+            if (nextSignature !== photosSignatureRef.current) {
+              photosSignatureRef.current = nextSignature;
+              setDynamicPhotos(photos);
+            }
+          }
         }
 
         const videosRes = await fetch(`/api/videos?v=${stamp}`, { cache: 'no-store' });
@@ -170,7 +190,11 @@ const GalleryPage: React.FC = () => {
                   duration: v.duration || '00:00'
                 };
               });
-            setDynamicVideos(mapped);
+            const nextSignature = buildVideosSignature(mapped);
+            if (nextSignature !== videosSignatureRef.current) {
+              videosSignatureRef.current = nextSignature;
+              setDynamicVideos(mapped);
+            }
           }
         }
       } catch (err) {
@@ -212,6 +236,7 @@ const GalleryPage: React.FC = () => {
     const initLightbox = () => {
       const Glightbox = (window as any).GLightbox;
       if (!mounted || !Glightbox || !preparedPhotos.length) return;
+      if (isLightboxOpenRef.current) return;
 
       const elements = preparedPhotos.map((photo) => ({
         href: photo.src,
@@ -233,6 +258,14 @@ const GalleryPage: React.FC = () => {
         loop: true,
         closeButton: true
       });
+      if (typeof lightboxRef.current?.on === 'function') {
+        lightboxRef.current.on('open', () => {
+          isLightboxOpenRef.current = true;
+        });
+        lightboxRef.current.on('close', () => {
+          isLightboxOpenRef.current = false;
+        });
+      }
       lightboxReadyRef.current = true;
     };
 
@@ -276,6 +309,7 @@ const GalleryPage: React.FC = () => {
     const isMainCollection = photos === preparedPhotos;
 
     if (isMainCollection && lightboxReadyRef.current && lightboxRef.current) {
+      isLightboxOpenRef.current = true;
       lightboxRef.current.openAt(clampedIndex);
       return;
     }
@@ -300,7 +334,16 @@ const GalleryPage: React.FC = () => {
         loop: true,
         closeButton: true
       });
+      if (typeof lightboxRef.current?.on === 'function') {
+        lightboxRef.current.on('open', () => {
+          isLightboxOpenRef.current = true;
+        });
+        lightboxRef.current.on('close', () => {
+          isLightboxOpenRef.current = false;
+        });
+      }
       lightboxReadyRef.current = true;
+      isLightboxOpenRef.current = true;
       lightboxRef.current.openAt(clampedIndex);
       return;
     }
