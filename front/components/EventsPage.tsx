@@ -29,17 +29,6 @@ interface EventsPageProps {
   onViewChange: (view: 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery') => void;
 }
 
-interface EventVideoItem {
-  id: number;
-  title: string;
-  youtubeUrl: string;
-  videoId: string;
-  thumbnail: string;
-  duration: string;
-}
-
-
-
 const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
   const { getText } = useSiteContent('eventspage');
   const requiredFieldsToast = getText('PILOT_FORM_TOAST_REQUIRED', 'Zəhmət olmasa bütün sahələri doldurun.');
@@ -47,8 +36,21 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
   const submitErrorToast = getText('PILOT_FORM_TOAST_ERROR', 'Gondərilmə zamanı xəta baş verdi.');
 
   const [eventsData, setEventsData] = useState<EventItem[]>([]);
-  const [pastVideos, setPastVideos] = useState<EventVideoItem[]>([]);
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
+
+  const normalizeEventStatus = (rawStatus: unknown, rawDate?: string): 'planned' | 'past' => {
+    const normalized = String(rawStatus || '').trim().toLocaleLowerCase('az');
+    if (normalized === 'past' || normalized === 'kecmis' || normalized === 'keçmiş') return 'past';
+    if (normalized === 'planned' || normalized === 'gelecek' || normalized === 'gələcək') return 'planned';
+
+    const date = new Date(String(rawDate || '').trim());
+    if (!Number.isNaN(date.getTime())) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (date.getTime() < today.getTime()) return 'past';
+    }
+    return 'planned';
+  };
 
   const extractYoutubeId = (url: string) => {
     if (!url) return null;
@@ -74,12 +76,9 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
   };
 
   useEffect(() => {
-    const loadEventsAndVideos = async () => {
+    const loadEvents = async () => {
       try {
-        const [eventsRes, videosRes] = await Promise.all([
-          fetch('/api/events'),
-          fetch('/api/videos')
-        ]);
+        const eventsRes = await fetch('/api/events');
 
         if (eventsRes.ok) {
           const data = await eventsRes.json();
@@ -96,31 +95,11 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
           }
         }
 
-        if (videosRes.ok) {
-          const videos = await videosRes.json();
-          if (Array.isArray(videos)) {
-            const mapped = videos
-              .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
-              .map((v: any) => {
-                const videoId = v.videoId || v.video_id || extractYoutubeId(v.youtubeUrl || v.url);
-                return {
-                  id: v.id,
-                  title: v.title,
-                  youtubeUrl: v.youtubeUrl || v.url || '',
-                  videoId: videoId || '',
-                  thumbnail: v.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : ''),
-                  duration: v.duration || '00:00'
-                };
-              })
-              .filter((v: EventVideoItem) => !!v.videoId);
-            setPastVideos(mapped);
-          }
-        }
       } catch (err) {
-        console.error('Failed to load events/videos from API', err);
+        console.error('Failed to load events from API', err);
       }
     };
-    loadEventsAndVideos();
+    loadEvents();
   }, []);
 
   const [activeTab, setActiveTab] = useState<'planned' | 'past'>('planned');
@@ -492,6 +471,17 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
 
   const plannedEvents = eventsData.filter(e => e.status === 'planned');
   const pastEvents = eventsData.filter(e => e.status === 'past');
+  const pastEventVideos = pastEvents
+    .map((event) => {
+      const videoId = extractYoutubeId(event.youtubeUrl || '');
+      if (!videoId) return null;
+      return {
+        ...event,
+        videoId,
+        thumbnail: event.img || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+      };
+    })
+    .filter(Boolean) as Array<EventItem & { videoId: string; thumbnail: string }>;
   const featuredEvent = plannedEvents[0];
 
   return (
@@ -581,88 +571,50 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
       ) : (
         <div className="space-y-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {pastEvents.length === 0 ? (
+            {pastEventVideos.length === 0 ? (
               <div className="col-span-full py-20 text-center text-gray-500 font-black italic uppercase tracking-widest">
-                {getText('NO_PAST_EVENTS', 'KEÇMİŞ TƏDBİR TAPILMADI')}
+                {getText('NO_PAST_EVENT_VIDEOS', 'KEÇMİŞ TƏDBİR VİDEOSU TAPILMADI')}
               </div>
             ) : (
-              pastEvents.map((event) => (
-                (() => {
-                  const videoId = extractYoutubeId(event.youtubeUrl || '');
-                  const previewImage = event.img
-                    || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=2070&auto=format&fit=crop');
-
-                  return (
-                    <div
-                      key={event.id}
-                      onClick={() => {
-                        if (videoId) {
-                          setPlayingVideoId(videoId);
-                          return;
-                        }
-                        setSelectedEvent(event);
-                      }}
-                      className="group relative cursor-pointer aspect-[4/5] bg-[#111] border border-white/5 overflow-hidden rounded-sm hover:border-[#FF4D00]/40 transition-all shadow-xl"
-                    >
-                      <img
-                        src={previewImage}
-                        className="w-full h-full object-cover grayscale opacity-40 transition-all duration-700 group-hover:grayscale-0 group-hover:opacity-90 group-hover:scale-105"
-                        alt={event.title}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
-
-                      <div className="absolute top-5 left-5 bg-white text-black px-4 py-1.5 font-black italic text-[9px] transform -skew-x-12 shadow-lg">
-                        <span className="transform skew-x-12 block uppercase tracking-[0.2em]">
-                          {getText('STATUS_PAST', 'BAŞA ÇATIB')}
-                        </span>
-                      </div>
-
-                      <div className="absolute bottom-8 left-8 right-8">
-                        <div className="text-gray-400 font-black italic text-[10px] mb-2 uppercase tracking-widest">{event.date}</div>
-                        <h4 className="text-3xl font-black italic text-white uppercase leading-none tracking-tighter group-hover:text-[#FF4D00] transition-colors">
-                          {event.title}
-                        </h4>
-                        <div className="mt-6 bg-white/5 border border-white/10 text-white px-5 py-2 font-black italic text-[8px] inline-block transform -skew-x-12 group-hover:bg-[#FF4D00] group-hover:text-black transition-all">
-                          <span className="transform skew-x-12 block uppercase tracking-[0.2em]">
-                            {videoId ? getText('BTN_WATCH_VIDEO', 'VİDEONU OYNAT') : getText('BTN_VIEW_DETAILS', 'ƏTRAFLI BAX')}
-                          </span>
-                        </div>
-                      </div>
+              pastEventVideos.map((event) => (
+                <div
+                  key={event.id}
+                  onClick={() => setPlayingVideoId(event.videoId)}
+                  className="group relative cursor-pointer aspect-[4/5] bg-[#111] border border-white/5 overflow-hidden rounded-sm hover:border-[#FF4D00]/40 transition-all shadow-xl"
+                >
+                  <img
+                    src={event.thumbnail}
+                    className="w-full h-full object-cover grayscale opacity-40 transition-all duration-700 group-hover:grayscale-0 group-hover:opacity-90 group-hover:scale-105"
+                    alt={event.title}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="bg-black/45 backdrop-blur-sm p-3 rounded-full border border-white/20 group-hover:bg-[#FF4D00] group-hover:text-black transition-all">
+                      <PlayCircle size={44} strokeWidth={1.5} />
                     </div>
-                  );
-                })()
+                  </div>
+
+                  <div className="absolute top-5 left-5 bg-white text-black px-4 py-1.5 font-black italic text-[9px] transform -skew-x-12 shadow-lg">
+                    <span className="transform skew-x-12 block uppercase tracking-[0.2em]">
+                      {getText('STATUS_PAST', 'BAŞA ÇATIB')}
+                    </span>
+                  </div>
+
+                  <div className="absolute bottom-8 left-8 right-8">
+                    <div className="text-gray-400 font-black italic text-[10px] mb-2 uppercase tracking-widest">{event.date}</div>
+                    <h4 className="text-3xl font-black italic text-white uppercase leading-none tracking-tighter group-hover:text-[#FF4D00] transition-colors">
+                      {event.title}
+                    </h4>
+                    <div className="mt-6 bg-white/5 border border-white/10 text-white px-5 py-2 font-black italic text-[8px] inline-block transform -skew-x-12 group-hover:bg-[#FF4D00] group-hover:text-black transition-all">
+                      <span className="transform skew-x-12 block uppercase tracking-[0.2em]">
+                        {getText('BTN_WATCH_VIDEO', 'VİDEONU OYNAT')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               ))
             )}
           </div>
-
-          {pastVideos.length > 0 && (
-            <div>
-              <div className="mb-6 text-[#FF4D00] font-black italic text-[11px] uppercase tracking-[0.3em]">
-                {getText('PAST_VIDEOS_TITLE', 'KEÇMİŞ TƏDBİR VİDEOLARI')}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-5">
-                {pastVideos.map((video) => (
-                  <div
-                    key={video.id}
-                    onClick={() => setPlayingVideoId(video.videoId)}
-                    className="group/video relative cursor-pointer aspect-[3/4] bg-[#111] border border-white/5 overflow-hidden rounded-sm hover:border-[#FF4D00]/40 transition-all shadow-xl"
-                  >
-                    <img
-                      src={video.thumbnail}
-                      className="w-full h-full object-cover grayscale opacity-30 transition-all duration-700 group-hover/video:grayscale-0 group-hover/video:opacity-100 group-hover/video:scale-105"
-                      alt={video.title}
-                    />
-                    <div className="absolute inset-0 bg-black/45 group-hover/video:bg-black/30 transition-colors"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="bg-black/45 backdrop-blur-sm p-3 rounded-full border border-white/20 group-hover/video:bg-[#FF4D00] group-hover/video:text-black transition-all">
-                        <PlayCircle size={44} strokeWidth={1.5} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -670,16 +622,3 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
 };
 
 export default EventsPage;
-  const normalizeEventStatus = (rawStatus: unknown, rawDate?: string): 'planned' | 'past' => {
-    const normalized = String(rawStatus || '').trim().toLocaleLowerCase('az');
-    if (normalized === 'past' || normalized === 'kecmis' || normalized === 'keçmiş') return 'past';
-    if (normalized === 'planned' || normalized === 'gelecek' || normalized === 'gələcək') return 'planned';
-
-    const date = new Date(String(rawDate || '').trim());
-    if (!Number.isNaN(date.getTime())) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (date.getTime() < today.getTime()) return 'past';
-    }
-    return 'planned';
-  };
