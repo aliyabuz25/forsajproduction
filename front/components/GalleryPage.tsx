@@ -40,6 +40,8 @@ const isNamedAlbum = (value: string) => {
   const key = normalizeAlbumKey(value);
   return key !== '' && !DEFAULT_ALBUM_KEYS.has(key);
 };
+const GALLERY_REFRESH_MS = 15000;
+const GALLERY_VERSION_KEY = 'forsaj_gallery_version';
 
 const GalleryPage: React.FC = () => {
   const [activeType, setActiveType] = useState<'photos' | 'videos'>('photos');
@@ -141,18 +143,21 @@ const GalleryPage: React.FC = () => {
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const loadGallery = async () => {
       try {
-        const photosRes = await fetch('/api/gallery-photos');
+        const stamp = Date.now();
+        const photosRes = await fetch(`/api/gallery-photos?v=${stamp}`, { cache: 'no-store' });
         if (photosRes.ok) {
           const photos = await photosRes.json();
-          if (photos) setDynamicPhotos(photos);
+          if (photos && mounted) setDynamicPhotos(photos);
         }
 
-        const videosRes = await fetch('/api/videos');
+        const videosRes = await fetch(`/api/videos?v=${stamp}`, { cache: 'no-store' });
         if (videosRes.ok) {
           const videos = await videosRes.json();
-          if (videos) {
+          if (videos && mounted) {
             const mapped = videos
               .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
               .map((v: any) => {
@@ -172,7 +177,22 @@ const GalleryPage: React.FC = () => {
         console.error('Gallery load failed from API', err);
       }
     };
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === GALLERY_VERSION_KEY || event.key === 'forsaj_site_content_version') {
+        loadGallery();
+      }
+    };
+
     loadGallery();
+    const refreshInterval = window.setInterval(loadGallery, GALLERY_REFRESH_MS);
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener('storage', onStorage);
+    };
   }, []);
 
   useEffect(() => {

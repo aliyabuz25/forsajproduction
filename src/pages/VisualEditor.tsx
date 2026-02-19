@@ -90,10 +90,28 @@ interface DriverCategory {
 }
 
 const DEFAULT_PHOTO_ALBUM = 'Ümumi Arxiv';
+const GALLERY_VERSION_KEY = 'forsaj_gallery_version';
+const RESERVED_PHOTO_ALBUM_KEYS = new Set([
+    '',
+    'umumi arxiv',
+    'ümumi arxiv',
+    'general archive',
+    'default',
+    'archive',
+    'arxiv'
+]);
 
 const normalizePhotoAlbum = (value?: string) => {
     const cleaned = (value || '').trim();
     return cleaned || DEFAULT_PHOTO_ALBUM;
+};
+
+const isReservedPhotoAlbum = (value?: string) => {
+    const normalized = normalizePhotoAlbum(value)
+        .toLocaleLowerCase('az')
+        .normalize('NFC')
+        .trim();
+    return RESERVED_PHOTO_ALBUM_KEYS.has(normalized);
 };
 
 const toSafePhotoId = (rawId: unknown, fallback: number) => {
@@ -1325,11 +1343,11 @@ const VisualEditor: React.FC = () => {
             // 2..7. Load all secondary resources in parallel to avoid slow UI boot.
             const [imagesData, eventsData, newsData, driversData, photosData, videosData] = await Promise.all([
                 fetch(`/api/all-images?v=${Date.now()}`).then(res => res.json()).catch(() => ({})),
-                fetch('/api/events').then(res => res.json()).catch(() => []),
-                fetch('/api/news').then(res => res.json()).catch(() => []),
-                fetch('/api/drivers').then(res => res.json()).catch(() => []),
-                fetch('/api/gallery-photos').then(res => res.json()).catch(() => []),
-                fetch('/api/videos').then(res => res.json()).catch(() => [])
+                fetch(`/api/events?v=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()).catch(() => []),
+                fetch(`/api/news?v=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()).catch(() => []),
+                fetch(`/api/drivers?v=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()).catch(() => []),
+                fetch(`/api/gallery-photos?v=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()).catch(() => []),
+                fetch(`/api/videos?v=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()).catch(() => [])
             ]);
 
             if (imagesData?.local) setAllAvailableImages(imagesData.local);
@@ -2287,6 +2305,7 @@ const VisualEditor: React.FC = () => {
         setIsSaving(true);
         const toastId = toast.loading('Yadda saxlanılır...');
         try {
+            const saveVersion = Date.now().toString();
             if (editorMode === 'extract') {
                 const res = await fetch('/api/save-content', {
                     method: 'POST',
@@ -2294,7 +2313,6 @@ const VisualEditor: React.FC = () => {
                     body: JSON.stringify(pages)
                 });
                 if (!res.ok) throw new Error(await res.text());
-                localStorage.setItem(CONTENT_VERSION_KEY, Date.now().toString());
             } else if (editorMode === 'events') {
                 const res = await fetch('/api/events', {
                     method: 'POST',
@@ -2324,6 +2342,10 @@ const VisualEditor: React.FC = () => {
                 });
                 if (!res.ok) throw new Error(await res.text());
             } else if (editorMode === 'photos') {
+                const genericAlbumPhoto = galleryPhotos.find((photo) => isReservedPhotoAlbum(photo.album));
+                if (genericAlbumPhoto) {
+                    throw new Error(`"${genericAlbumPhoto.title}" üçün albom seçilməyib`);
+                }
                 const res = await fetch('/api/gallery-photos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2332,6 +2354,10 @@ const VisualEditor: React.FC = () => {
                 if (!res.ok) throw new Error(await res.text());
             }
 
+            localStorage.setItem(CONTENT_VERSION_KEY, saveVersion);
+            if (editorMode === 'photos' || editorMode === 'videos' || editorMode === 'events') {
+                localStorage.setItem(GALLERY_VERSION_KEY, saveVersion);
+            }
             toast.success('Dəyişikliklər bulud bazasına qeyd edildi!', { id: toastId });
             await loadContent();
         } catch (err: any) {
@@ -2525,6 +2551,10 @@ const VisualEditor: React.FC = () => {
             return;
         }
         const normalizedAlbum = normalizePhotoAlbum(rawName);
+        if (isReservedPhotoAlbum(normalizedAlbum)) {
+            toast.error('Xüsusi albom adı yazın (Ümumi Arxiv olmaz)');
+            return;
+        }
         setSelectedPhotoAlbum(normalizedAlbum);
         setPhotoAlbumFilter(normalizedAlbum);
         setNewPhotoAlbumName('');
@@ -2549,6 +2579,10 @@ const VisualEditor: React.FC = () => {
     const addGalleryPhoto = () => {
         const newId = getNextGalleryPhotoId();
         const normalizedAlbum = normalizePhotoAlbum(selectedPhotoAlbum);
+        if (isReservedPhotoAlbum(normalizedAlbum)) {
+            toast.error('Əvvəlcə albom seçin və ya event albomu təyin edin');
+            return;
+        }
         const numericEventId = Number(selectedPhotoEventId);
         const linkedEventId = selectedPhotoEventId && Number.isFinite(numericEventId) ? numericEventId : null;
         const newItem: GalleryPhotoItem = {
@@ -2634,6 +2668,11 @@ const VisualEditor: React.FC = () => {
         if (!files.length) return;
 
         const baseAlbum = normalizePhotoAlbum(selectedPhotoAlbum);
+        if (isReservedPhotoAlbum(baseAlbum)) {
+            toast.error('Çoxlu yükləmə üçün əvvəlcə albom seçin');
+            e.target.value = '';
+            return;
+        }
         const numericEventId = Number(selectedPhotoEventId);
         const linkedEventId = selectedPhotoEventId && Number.isFinite(numericEventId) ? numericEventId : null;
 
