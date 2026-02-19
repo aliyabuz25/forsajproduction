@@ -76,16 +76,33 @@ const NewsPage: React.FC = () => {
   }, [selectedNews]);
 
   const handleShare = (platform: string) => {
-    const url = window.location.href;
-    const text = selectedNews?.title || '';
+    const currentUrl = window.location.href;
+    const shareText = (selectedNews?.title || '').trim();
+    const encodedUrl = encodeURIComponent(currentUrl);
+    const encodedText = encodeURIComponent(shareText);
     let shareUrl = '';
+
     switch (platform) {
-      case 'facebook': shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`; break;
-      case 'twitter': shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`; break;
-      case 'whatsapp': shareUrl = `https://api.whatsapp.com/send?text=${text} ${url}`; break;
-      case 'telegram': shareUrl = `https://t.me/share/url?url=${url}&text=${text}`; break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://x.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+        break;
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${currentUrl}`.trim())}`;
+        break;
+      case 'telegram':
+        shareUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`;
+        break;
+      default:
+        return;
     }
-    window.open(shareUrl, '_blank');
+
+    const popup = window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    if (!popup) {
+      window.location.href = shareUrl;
+    }
   };
 
   if (selectedNews) {
