@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken');
 
 const PORT = process.env.PORT || 5000;
 const app = express();
+const FORCED_MAIL_LOGO_URL = 'https://forsaj.octotech.az/uploads/1771427495257-714907240.png';
 
 // ------------------------------------------
 // MYSQL CONFIGURATION
@@ -778,7 +779,7 @@ const sendApplicationNotificationEmail = async ({ name, contact, type, content }
     const safeSiteName = escapeHtml(smtp.siteName || 'Forsaj Club');
     const safeSiteUrl = escapeHtml(siteUrlText);
     const hasPublicSiteUrl = /^https?:\/\//i.test(siteUrlText);
-    const logoAsset = resolveInlineLogoAttachment(smtp.logoUrl);
+    const logoAsset = resolveInlineLogoAttachment(FORCED_MAIL_LOGO_URL || smtp.logoUrl);
     const headerLogo = logoAsset.src
         ? `<img src="${escapeHtml(logoAsset.src)}" alt="${safeSiteName}" style="height:46px;max-width:240px;width:auto;display:block;object-fit:contain;" />`
         : `<div style="font-size:22px;font-weight:900;letter-spacing:0.02em;color:#f9fafb;">${safeSiteName}</div>`;
