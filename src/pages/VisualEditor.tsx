@@ -681,10 +681,11 @@ const VisualEditor: React.FC = () => {
 
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
-    const mode = queryParams.get('mode'); // 'extract', 'events', 'news', 'drivers', 'videos', 'photos'
+    const mode = queryParams.get('mode'); // 'extract', 'events', 'event-management', 'news', 'drivers', 'videos', 'photos'
     const pageParam = queryParams.get('page');
 
-    const [editorMode, setEditorMode] = useState<'extract' | 'events' | 'news' | 'drivers' | 'videos' | 'photos'>('extract');
+    const [editorMode, setEditorMode] = useState<'extract' | 'events' | 'event-management' | 'news' | 'drivers' | 'videos' | 'photos'>('extract');
+    const [eventManagementTab, setEventManagementTab] = useState<'modal' | 'pilot'>('modal');
 
     const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhotoItem[]>([]);
     const autoSyncTriggeredRef = useRef(false);
@@ -1029,6 +1030,24 @@ const VisualEditor: React.FC = () => {
                         { id: 'SIDEBAR_QUESTION_TITLE', label: 'Sual Kartı Başlığı', value: 'SUALINIZ VAR?' },
                         { id: 'SIDEBAR_QUESTION_DESC', label: 'Sual Kartı Təsviri', value: 'YARIŞLA BAĞLI ƏLAVƏ SUALLARINIZ ÜÇÜN BİZİMLƏ ƏLAQƏ SAXLAYIN.' },
                         { id: 'BTN_CONTACT', label: 'Sual Kartı Əlaqə Düyməsi', value: 'ƏLAQƏ' },
+                        { id: 'MODAL_TITLE', label: 'İştirak Modal Başlığı', value: 'YARIŞDA İŞTİRAK' },
+                        { id: 'JOIN_AS_PILOT', label: 'Pilot Kart Başlığı', value: 'PİLOT KİMİ QATIL' },
+                        { id: 'JOIN_PILOT_DESC', label: 'Pilot Kart Təsviri', value: 'TEXNİKİ REQLAMENTƏ UYĞUN OLARAQ' },
+                        { id: 'JOIN_AS_SPECTATOR', label: 'İzləyici Kart Başlığı', value: 'İZLƏYİCİ KİMİ QATIL' },
+                        { id: 'JOIN_SPECTATOR_DESC', label: 'İzləyici Kart Təsviri', value: 'YARIŞI TRİBUNADAN İZLƏ' },
+                        { id: 'BTN_BACK', label: 'Geri Düyməsi', value: 'GERİ QAYIT' },
+                        { id: 'PILOT_REG_TITLE', label: 'Pilot Qeydiyyatı Başlığı', value: 'PİLOT QEYDİYYATI' },
+                        { id: 'FIELD_NAME', label: 'Ad Soyad Label', value: 'AD VƏ SOYAD' },
+                        { id: 'PLACEHOLDER_NAME', label: 'Ad Soyad Placeholder', value: 'Tam ad daxil edin' },
+                        { id: 'FIELD_PHONE', label: 'Telefon Label', value: 'TELEFON' },
+                        { id: 'FIELD_CAR_MODEL', label: 'Avtomobil Label', value: 'AVTOMOBİLİN MARKA/MODELİ' },
+                        { id: 'PLACEHOLDER_CAR', label: 'Avtomobil Placeholder', value: 'Məs: Toyota LC 105' },
+                        { id: 'FIELD_TIRE_SIZE', label: 'Təkər Label', value: 'TƏKƏR ÖLÇÜSÜ' },
+                        { id: 'PLACEHOLDER_TIRE', label: 'Təkər Placeholder', value: 'Məs: 35 DÜYM' },
+                        { id: 'FIELD_ENGINE', label: 'Mühərrik Label', value: 'MÜHƏRRİK HƏCMİ' },
+                        { id: 'PLACEHOLDER_ENGINE', label: 'Mühərrik Placeholder', value: 'Məs: 4.4L' },
+                        { id: 'FIELD_CLUB', label: 'Klub Label', value: 'TƏMSİL ETDİYİ KLUB' },
+                        { id: 'BTN_COMPLETE_REG', label: 'Qeydiyyatı Tamamla Düyməsi', value: 'QEYDİYYATI TAMAMLA' },
                         { id: 'PILOT_FORM_TOAST_REQUIRED', label: 'Pilot Form Boş Sahə Xəbərdarlığı', value: 'Zəhmət olmasa bütün sahələri doldurun.' },
                         { id: 'PILOT_FORM_TOAST_SUCCESS', label: 'Pilot Form Uğurlu Göndəriş Mesajı', value: 'Qeydiyyat müraciətiniz uğurla göndərildi!' },
                         { id: 'PILOT_FORM_TOAST_ERROR', label: 'Pilot Form Xəta Mesajı', value: 'Gondərilmə zamanı xəta baş verdi.' },
@@ -1493,7 +1512,7 @@ const VisualEditor: React.FC = () => {
         const modeParam = queryParams.get('mode');
         const pageParam = queryParams.get('page');
 
-        if (modeParam && ['extract', 'events', 'news', 'drivers', 'videos', 'photos'].includes(modeParam)) {
+        if (modeParam && ['extract', 'events', 'event-management', 'news', 'drivers', 'videos', 'photos'].includes(modeParam)) {
             setEditorMode(modeParam as any);
         } else if (pageParam) {
             setEditorMode('extract');
@@ -2389,7 +2408,7 @@ const VisualEditor: React.FC = () => {
         const toastId = toast.loading('Yadda saxlanılır...');
         try {
             const saveVersion = Date.now().toString();
-            if (editorMode === 'extract') {
+            if (editorMode === 'extract' || editorMode === 'event-management') {
                 const res = await fetch('/api/save-content', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3055,6 +3074,64 @@ const VisualEditor: React.FC = () => {
         const found = eventsPageConfig?.sections?.find((section) => section.id === key);
         return (found?.value || fallback).toString();
     };
+    const updateEventManagementValue = (key: string, label: string, value: string) => {
+        const nextPages = [...pages];
+        let pageIdx = nextPages.findIndex((page) => page.id === 'eventspage');
+        if (pageIdx === -1) {
+            nextPages.push({
+                id: 'eventspage',
+                title: componentLabels.eventspage || 'Tədbirlər Səhifəsi',
+                sections: [],
+                images: []
+            });
+            pageIdx = nextPages.length - 1;
+        }
+
+        const page = nextPages[pageIdx];
+        const sectionIdx = (page.sections || []).findIndex((section) => section.id === key);
+        if (sectionIdx >= 0) {
+            page.sections[sectionIdx] = {
+                ...page.sections[sectionIdx],
+                label: page.sections[sectionIdx].label || label,
+                value
+            };
+        } else {
+            const nextOrder = (page.sections || []).reduce((max, s, idx) => Math.max(max, normalizeOrder(s.order, idx)), -1) + 1;
+            page.sections.push({ id: key, type: 'text', label, value, order: nextOrder });
+        }
+
+        setPages(nextPages);
+    };
+    const updateEventManagementUrl = (key: string, label: string, value: string, url: string) => {
+        const nextPages = [...pages];
+        let pageIdx = nextPages.findIndex((page) => page.id === 'eventspage');
+        if (pageIdx === -1) {
+            nextPages.push({
+                id: 'eventspage',
+                title: componentLabels.eventspage || 'Tədbirlər Səhifəsi',
+                sections: [],
+                images: []
+            });
+            pageIdx = nextPages.length - 1;
+        }
+
+        const page = nextPages[pageIdx];
+        const normalizedUrl = toAbsoluteUrl(url);
+        const sectionIdx = (page.sections || []).findIndex((section) => section.id === key);
+        if (sectionIdx >= 0) {
+            page.sections[sectionIdx] = {
+                ...page.sections[sectionIdx],
+                label: page.sections[sectionIdx].label || label,
+                value,
+                url: normalizedUrl || page.sections[sectionIdx].url
+            };
+        } else {
+            const nextOrder = (page.sections || []).reduce((max, s, idx) => Math.max(max, normalizeOrder(s.order, idx)), -1) + 1;
+            page.sections.push({ id: key, type: 'text', label, value, url: normalizedUrl, order: nextOrder });
+        }
+
+        setPages(nextPages);
+    };
 
     const displayedSections = (currentPage?.sections || []).filter(s => {
         if (!isSectionVisibleInAdmin(s)) return false;
@@ -3711,6 +3788,12 @@ const VisualEditor: React.FC = () => {
                         Tədbirlər
                     </button>
                     <button
+                        className={`mode-btn ${editorMode === 'event-management' ? 'active' : ''}`}
+                        onClick={() => setEditorMode('event-management')}
+                    >
+                        Tedbir Yönetimi
+                    </button>
+                    <button
                         className={`mode-btn ${editorMode === 'news' ? 'active' : ''}`}
                         onClick={() => setEditorMode('news')}
                     >
@@ -3742,7 +3825,217 @@ const VisualEditor: React.FC = () => {
                 )}
             </div>
 
-            {editorMode === 'news' ? (
+            {editorMode === 'event-management' ? (
+                <div className="editor-layout with-sidebar">
+                    <aside className="page-list">
+                        <div className="list-header" style={{ marginBottom: '1rem' }}>
+                            <h3>Tedbir Yönetimi</h3>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <button
+                                className={`page-nav-item ${eventManagementTab === 'modal' ? 'active' : ''}`}
+                                onClick={() => setEventManagementTab('modal')}
+                                style={{ width: '100%', textAlign: 'left' }}
+                            >
+                                <Layout size={14} /> Yarışda İştirak
+                            </button>
+                            <button
+                                className={`page-nav-item ${eventManagementTab === 'pilot' ? 'active' : ''}`}
+                                onClick={() => setEventManagementTab('pilot')}
+                                style={{ width: '100%', textAlign: 'left' }}
+                            >
+                                <FileText size={14} /> Pilot Qeydiyyatı
+                            </button>
+                        </div>
+                    </aside>
+
+                    <main className="editor-canvas editor-canvas-flat">
+                        <div className="editor-workspace">
+                            <div className="canvas-header canvas-header-block">
+                                <h2 style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <Calendar size={22} /> Tedbir Yönetimi
+                                </h2>
+                                <p style={{ color: '#64748b' }}>
+                                    Tədbir modalı və pilot qeydiyyat formu mətnlərini buradan dəyişin.
+                                </p>
+                            </div>
+
+                            {eventManagementTab === 'modal' ? (
+                                <div className="edit-grid grid-2">
+                                    <div className="form-group full-span">
+                                        <label>MODAL BAŞLIĞI</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('MODAL_TITLE', 'YARIŞDA İŞTİRAK')}
+                                            onChange={(e) => updateEventManagementValue('MODAL_TITLE', 'İştirak Modal Başlığı', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>PİLOT KART BAŞLIĞI</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('JOIN_AS_PILOT', 'PİLOT KİMİ QATIL')}
+                                            onChange={(e) => updateEventManagementValue('JOIN_AS_PILOT', 'Pilot Kart Başlığı', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>PİLOT KART TƏSVİRİ</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('JOIN_PILOT_DESC', 'TEXNİKİ REQLAMENTƏ UYĞUN OLARAQ')}
+                                            onChange={(e) => updateEventManagementValue('JOIN_PILOT_DESC', 'Pilot Kart Təsviri', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>İZLƏYİCİ KART BAŞLIĞI</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('JOIN_AS_SPECTATOR', 'İZLƏYİCİ KİMİ QATIL')}
+                                            onChange={(e) => updateEventManagementValue('JOIN_AS_SPECTATOR', 'İzləyici Kart Başlığı', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>İZLƏYİCİ KART TƏSVİRİ</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('JOIN_SPECTATOR_DESC', 'YARIŞI TRİBUNADAN İZLƏ')}
+                                            onChange={(e) => updateEventManagementValue('JOIN_SPECTATOR_DESC', 'İzləyici Kart Təsviri', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group full-span">
+                                        <label>İZLƏYİCİ YÖNLƏNDİRMƏ URL</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('SPECTATOR_TICKET_URL', 'https://iticket.az')}
+                                            onChange={(e) => updateEventManagementUrl('SPECTATOR_TICKET_URL', 'İzləyici Bilet Linki', e.target.value, e.target.value)}
+                                            placeholder="https://..."
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="edit-grid grid-2">
+                                    <div className="form-group full-span">
+                                        <label>GERİ DÜYMƏSİ</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('BTN_BACK', 'GERİ QAYIT')}
+                                            onChange={(e) => updateEventManagementValue('BTN_BACK', 'Geri Düyməsi', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group full-span">
+                                        <label>PİLOT QEYDİYYATI BAŞLIĞI</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('PILOT_REG_TITLE', 'PİLOT QEYDİYYATI')}
+                                            onChange={(e) => updateEventManagementValue('PILOT_REG_TITLE', 'Pilot Qeydiyyatı Başlığı', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>AD VƏ SOYAD LABEL</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('FIELD_NAME', 'AD VƏ SOYAD')}
+                                            onChange={(e) => updateEventManagementValue('FIELD_NAME', 'Ad Soyad Label', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>AD VƏ SOYAD PLACEHOLDER</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('PLACEHOLDER_NAME', 'Tam ad daxil edin')}
+                                            onChange={(e) => updateEventManagementValue('PLACEHOLDER_NAME', 'Ad Soyad Placeholder', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>TELEFON LABEL</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('FIELD_PHONE', 'TELEFON')}
+                                            onChange={(e) => updateEventManagementValue('FIELD_PHONE', 'Telefon Label', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>TELEFON PLACEHOLDER</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('PLACEHOLDER_PHONE', '+994 -- --- -- --')}
+                                            onChange={(e) => updateEventManagementValue('PLACEHOLDER_PHONE', 'Telefon Placeholder', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>AVTOMOBİL LABEL</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('FIELD_CAR_MODEL', 'AVTOMOBİLİN MARKA/MODELİ')}
+                                            onChange={(e) => updateEventManagementValue('FIELD_CAR_MODEL', 'Avtomobil Label', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>AVTOMOBİL PLACEHOLDER</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('PLACEHOLDER_CAR', 'Məs: Toyota LC 105')}
+                                            onChange={(e) => updateEventManagementValue('PLACEHOLDER_CAR', 'Avtomobil Placeholder', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>TƏKƏR LABEL</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('FIELD_TIRE_SIZE', 'TƏKƏR ÖLÇÜSÜ')}
+                                            onChange={(e) => updateEventManagementValue('FIELD_TIRE_SIZE', 'Təkər Label', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>TƏKƏR PLACEHOLDER</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('PLACEHOLDER_TIRE', 'Məs: 35 DÜYM')}
+                                            onChange={(e) => updateEventManagementValue('PLACEHOLDER_TIRE', 'Təkər Placeholder', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>MÜHƏRRİK LABEL</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('FIELD_ENGINE', 'MÜHƏRRİK HƏCMİ')}
+                                            onChange={(e) => updateEventManagementValue('FIELD_ENGINE', 'Mühərrik Label', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>MÜHƏRRİK PLACEHOLDER</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('PLACEHOLDER_ENGINE', 'Məs: 4.4L')}
+                                            onChange={(e) => updateEventManagementValue('PLACEHOLDER_ENGINE', 'Mühərrik Placeholder', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>KLUB LABEL</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('FIELD_CLUB', 'TƏMSİL ETDİYİ KLUB')}
+                                            onChange={(e) => updateEventManagementValue('FIELD_CLUB', 'Klub Label', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>TAMAMLAMA DÜYMƏSİ</label>
+                                        <input
+                                            type="text"
+                                            value={getEventsPageConfigValue('BTN_COMPLETE_REG', 'QEYDİYYATI TAMAMLA')}
+                                            onChange={(e) => updateEventManagementValue('BTN_COMPLETE_REG', 'Qeydiyyatı Tamamla Düyməsi', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="editor-savebar">
+                                <button className="btn-primary" onClick={saveChanges}>Yadda Saxla</button>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            ) : editorMode === 'news' ? (
                 <div className="editor-layout with-sidebar">
                     <aside className="page-list">
                         <div className="list-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
