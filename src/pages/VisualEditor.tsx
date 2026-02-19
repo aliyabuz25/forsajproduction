@@ -89,6 +89,14 @@ interface DriverCategory {
     drivers: DriverItem[];
 }
 
+type CoreValueField = 'icon' | 'title' | 'desc';
+interface CoreValueRow {
+    suffix: string;
+    icon: string;
+    title: string;
+    desc: string;
+}
+
 const DEFAULT_PHOTO_ALBUM = 'Ümumi Arxiv';
 const GALLERY_VERSION_KEY = 'forsaj_gallery_version';
 const RESERVED_PHOTO_ALBUM_KEYS = new Set([
@@ -258,6 +266,13 @@ const LEGAL_SECTION_GROUPS: Record<string, Array<{ title: string; subtitle: stri
             ids: ['CONTACT_TITLE', 'CONTACT_EMAIL', 'CONTACT_WEBSITE']
         }
     ]
+};
+
+const CORE_VALUE_FIELD_REGEX = /^val-(icon|title|desc)-(.+)$/i;
+const parseCoreValueField = (id: string): { field: CoreValueField; suffix: string } | null => {
+    const match = String(id || '').trim().match(CORE_VALUE_FIELD_REGEX);
+    if (!match) return null;
+    return { field: match[1].toLowerCase() as CoreValueField, suffix: match[2] };
 };
 
 const PAGE_EDIT_HINTS: Record<string, string> = {
@@ -1725,6 +1740,50 @@ const VisualEditor: React.FC = () => {
         toast.success('Yeni dəyər əlavə edildi');
     };
 
+    const updateCoreValueField = (suffix: string, field: CoreValueField, value: string, pageIdx: number = selectedPageIndex) => {
+        if (pageIdx < 0 || pageIdx >= pages.length) return;
+        const newPages = [...pages];
+        const current = newPages[pageIdx];
+        if (!current || !['about', 'values'].includes(current.id)) return;
+
+        const targetId = `val-${field}-${suffix}`;
+        const sectionIdx = (current.sections || []).findIndex((s) => s.id === targetId);
+        const normalizedValue = field === 'icon' ? String(value || '').trim() : normalizePlainText(value);
+
+        if (sectionIdx !== -1) {
+            current.sections[sectionIdx].value = normalizedValue;
+        } else {
+            const defaultLabel = field === 'icon'
+                ? 'İkon Kodu (Shield/Users/Leaf/Zap)'
+                : field === 'title'
+                    ? 'Dəyər Başlığı'
+                    : 'Dəyər Təsviri';
+            current.sections.push({
+                id: targetId,
+                type: 'text',
+                label: defaultLabel,
+                value: normalizedValue
+            });
+        }
+
+        setPages(newPages);
+    };
+
+    const removeCoreValueRow = (suffix: string, pageIdx: number = selectedPageIndex) => {
+        if (pageIdx < 0 || pageIdx >= pages.length) return;
+        const newPages = [...pages];
+        const current = newPages[pageIdx];
+        if (!current || !['about', 'values'].includes(current.id)) return;
+
+        current.sections = (current.sections || []).filter((section) => {
+            const parsed = parseCoreValueField(section.id);
+            return !parsed || parsed.suffix !== suffix;
+        });
+
+        setPages(newPages);
+        toast.success('Dəyər silindi');
+    };
+
     const getPartnerRows = (page: PageContent | undefined): PartnerRow[] => {
         if (!page) return [];
         const rows = new Map<number, PartnerRow>();
@@ -2970,6 +3029,7 @@ const VisualEditor: React.FC = () => {
         if (!isSectionVisibleInAdmin(s)) return false;
         if (shouldSkipSectionInEditor(s)) return false;
         if (currentPage?.id === 'about' && isStatSectionId(s.id)) return false;
+        if ((currentPage?.id === 'about' || currentPage?.id === 'values') && CORE_VALUE_FIELD_REGEX.test(s.id)) return false;
         if (currentPage?.id === 'partners') return false;
         if (currentPage?.id === 'rulespage' && RULE_TAB_SECTION_REGEX.test(s.id)) return false;
         if (currentPage?.id === 'rulespage' && s.id.startsWith('RULES_')) return false;
@@ -3000,6 +3060,27 @@ const VisualEditor: React.FC = () => {
         : [];
 
     const rulesTabRows = currentPage?.id === 'rulespage' ? getRulesTabRows(currentPage) : [];
+    const coreValueRows: CoreValueRow[] = (currentPage?.id === 'about' || currentPage?.id === 'values')
+        ? (() => {
+            const rowsMap = new Map<string, CoreValueRow>();
+            (currentPage?.sections || []).forEach((section) => {
+                const parsed = parseCoreValueField(section.id);
+                if (!parsed) return;
+                const current = rowsMap.get(parsed.suffix) || {
+                    suffix: parsed.suffix,
+                    icon: 'Shield',
+                    title: '',
+                    desc: ''
+                };
+                current[parsed.field] = section.value || '';
+                rowsMap.set(parsed.suffix, current);
+            });
+
+            return Array.from(rowsMap.values())
+                .sort((a, b) => a.suffix.localeCompare(b.suffix, undefined, { numeric: true }))
+                .filter((row) => matchesSearch(row.suffix, row.icon, row.title, row.desc));
+        })()
+        : [];
 
     const displayedImages = (currentPage?.images || []).filter(i => {
         return matchesSearch(i.id, i.alt, i.path);
@@ -5104,6 +5185,84 @@ const VisualEditor: React.FC = () => {
                                                 ) : (
                                                     <div style={{ padding: '1rem', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#64748b', fontSize: '13px' }}>
                                                         {searchTerm ? 'Axtarışa uyğun statistika tapılmadı.' : 'Hələ statistika yoxdur. "Yeni Statistika" ilə əlavə edin.'}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {(currentPage.id === 'about' || currentPage.id === 'values') && (
+                                        <div className="field-group">
+                                            <div className="field-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <label><Shield size={16} /> Əsas Dəyərlər</label>
+                                                <button className="add-field-minimal" onClick={() => addCoreValueRow()}>
+                                                    <Plus size={14} /> Yeni Dəyər
+                                                </button>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                {coreValueRows.length > 0 ? (
+                                                    coreValueRows.map((row) => (
+                                                        <div key={`core-value-${row.suffix}`} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px', background: '#fff', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>
+                                                                    Dəyər ID: {row.suffix}
+                                                                </div>
+                                                                <button
+                                                                    title="Dəyəri sil"
+                                                                    onClick={() => removeCoreValueRow(row.suffix)}
+                                                                    style={{ background: '#fff', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: '8px', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
+
+                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(54px, 1fr))', gap: '8px' }}>
+                                                                {CORE_VALUE_ICON_PRESETS.map((opt) => {
+                                                                    const IconComponent = CORE_VALUE_ICON_COMPONENTS[opt];
+                                                                    const selected = row.icon === opt;
+                                                                    return (
+                                                                        <button
+                                                                            key={`core-${row.suffix}-${opt}`}
+                                                                            type="button"
+                                                                            title={opt}
+                                                                            onClick={() => updateCoreValueField(row.suffix, 'icon', opt)}
+                                                                            style={{
+                                                                                height: '44px',
+                                                                                border: selected ? '1px solid #f97316' : '1px solid #e2e8f0',
+                                                                                borderRadius: '10px',
+                                                                                background: selected ? '#fff7ed' : '#fff',
+                                                                                color: selected ? '#ea580c' : '#475569',
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center',
+                                                                                cursor: 'pointer'
+                                                                            }}
+                                                                        >
+                                                                            <IconComponent size={18} />
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+
+                                                            <input
+                                                                type="text"
+                                                                value={row.title}
+                                                                onChange={(e) => updateCoreValueField(row.suffix, 'title', e.target.value)}
+                                                                placeholder="Dəyər başlığı (Məs: TƏHLÜKƏSİZLİK)"
+                                                                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 700 }}
+                                                            />
+                                                            <textarea
+                                                                rows={3}
+                                                                value={row.desc}
+                                                                onChange={(e) => updateCoreValueField(row.suffix, 'desc', e.target.value)}
+                                                                placeholder="Dəyər təsviri"
+                                                                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', lineHeight: 1.4, resize: 'vertical' }}
+                                                            />
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div style={{ padding: '1rem', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#64748b', fontSize: '13px' }}>
+                                                        {searchTerm ? 'Axtarışa uyğun dəyər tapılmadı.' : 'Hələ dəyər yoxdur. "Yeni Dəyər" ilə əlavə edin.'}
                                                     </div>
                                                 )}
                                             </div>
