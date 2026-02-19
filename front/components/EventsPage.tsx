@@ -117,7 +117,6 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
   const [activeTab, setActiveTab] = useState<'planned' | 'past'>('planned');
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [regStep, setRegStep] = useState<'select' | 'pilot' | null>(null);
-  const [selectedClub, setSelectedClub] = useState('');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -149,7 +148,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
     window.open(spectatorUrl, '_blank');
   };
 
-  const RegistrationModal = () => {
+  const renderRegistrationModal = () => {
     if (!regStep) return null;
 
     const clubs = [
@@ -170,7 +169,6 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
           <button
             onClick={() => {
               setRegStep(null);
-              setSelectedClub('');
             }}
             className="absolute top-8 right-8 text-gray-600 hover:text-white transition-colors"
           >
@@ -187,7 +185,6 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div
                   onClick={() => {
-                    setSelectedClub((prev) => (prev && clubs.includes(prev) ? prev : (clubs[0] || '')));
                     setRegStep('pilot');
                   }}
                   className="group cursor-pointer bg-black border border-white/5 hover:border-[#FF4D00] transition-all p-12 flex flex-col items-center justify-center min-h-[300px] shadow-2xl"
@@ -234,7 +231,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
                 const car = String(fd.get('car') || '').trim();
                 const tire = String(fd.get('tire') || '').trim();
                 const engine = String(fd.get('engine') || '').trim();
-                const club = selectedClub.trim() || String(fd.get('club') || '').trim();
+                const club = String(fd.get('club') || '').trim();
 
                 if (!name || !contact || !car || !tire || !engine || !club) {
                   toast.error(requiredFieldsToast);
@@ -263,7 +260,6 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
                   if (res.ok) {
                     toast.success(submitSuccessToast);
                     setRegStep(null);
-                    setSelectedClub('');
                   } else {
                     const err = await res.json().catch(() => ({}));
                     throw new Error(err?.error || 'request_failed');
@@ -300,8 +296,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
                     <select
                       name="club"
                       required
-                      value={selectedClub || clubs[0] || ''}
-                      onChange={(e) => setSelectedClub(e.target.value)}
+                      defaultValue={clubs[0] || ''}
                       className="w-full bg-black border border-white/5 text-white p-5 font-black italic text-sm focus:ring-1 focus:ring-[#FF4D00] outline-none uppercase appearance-none cursor-pointer"
                     >
                       {clubs.map((club) => (
@@ -328,7 +323,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
   if (selectedEvent) {
     return (
       <div className="bg-[#0A0A0A] min-h-screen pb-20 text-white animate-in fade-in duration-500">
-        <RegistrationModal />
+        {renderRegistrationModal()}
         <div className="px-6 lg:px-20 py-8">
           <button
             onClick={() => setSelectedEvent(null)}

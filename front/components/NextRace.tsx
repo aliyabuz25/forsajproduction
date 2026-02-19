@@ -65,7 +65,11 @@ const NextRace: React.FC<NextRaceProps> = ({ onViewChange }) => {
   const resolveViewFromUrl = (rawUrl: string): string | null => {
     try {
       const parsed = new URL(rawUrl, window.location.origin);
-      if (parsed.origin !== window.location.origin) return null;
+      const currentHost = window.location.hostname.replace(/^www\./, '');
+      const parsedHost = parsed.hostname.replace(/^www\./, '');
+      const isSameHost = parsedHost === currentHost;
+      const isLikelyInternalHost = parsedHost.includes('forsaj') || currentHost.includes('forsaj');
+      if (!isSameHost && !isLikelyInternalHost) return null;
 
       const candidates = [
         parsed.pathname.replace(/^\/+|\/+$/g, ''),

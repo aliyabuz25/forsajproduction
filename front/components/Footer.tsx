@@ -6,6 +6,7 @@ import { resolveSocialLinks } from '../utils/socialLinks';
 import toast from 'react-hot-toast';
 
 const RULES_TARGET_SECTION_KEY = 'forsaj_rules_target_section';
+const RULES_TARGET_SECTION_EVENT = 'forsaj:rules-target-section';
 
 interface FooterProps {
   onViewChange: (view: 'home' | 'about' | 'news' | 'events' | 'drivers' | 'rules' | 'contact' | 'gallery' | 'privacy' | 'terms') => void;
@@ -99,6 +100,10 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
     if (token.includes('surucu') || token.includes('srucu') || token.includes('src')) return 'drivers';
     if (token.includes('qalereya') || token.includes('galereya')) return 'gallery';
     if (token.includes('qayda')) return 'rules';
+    if (token.includes('pilot')) return 'rules';
+    if (token.includes('texniki') || token.includes('normativ')) return 'rules';
+    if (token.includes('tehlukesiz')) return 'rules';
+    if (token.includes('ekoloji')) return 'rules';
     if (token.includes('elaqe') || token.includes('laq') || token.includes('elaq')) return 'contact';
     if (token.includes('privacy') || token.includes('mexfilik')) return 'privacy';
     if (token.includes('terms') || token.includes('xidmetsert')) return 'terms';
@@ -115,7 +120,11 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
 
     try {
       const parsed = new URL(value, window.location.origin);
-      if (parsed.origin !== window.location.origin) return null;
+      const currentHost = window.location.hostname.replace(/^www\./, '');
+      const parsedHost = parsed.hostname.replace(/^www\./, '');
+      const isSameHost = parsedHost === currentHost;
+      const isLikelyInternalHost = parsedHost.includes('forsaj') || currentHost.includes('forsaj');
+      if (!isSameHost && !isLikelyInternalHost) return null;
 
       const candidates = [
         normalize(parsed.pathname.replace(/^\/+|\/+$/g, '')),
@@ -162,7 +171,12 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
     const value = (rawValue || '').trim();
     if (!/^https?:\/\//i.test(value)) return false;
     try {
-      return new URL(value).origin !== window.location.origin;
+      const parsed = new URL(value);
+      const currentHost = window.location.hostname.replace(/^www\./, '');
+      const parsedHost = parsed.hostname.replace(/^www\./, '');
+      const isSameHost = parsedHost === currentHost;
+      const isLikelyInternalHost = parsedHost.includes('forsaj') || currentHost.includes('forsaj');
+      return !isSameHost && !isLikelyInternalHost;
     } catch {
       return true;
     }
@@ -323,6 +337,11 @@ const Footer: React.FC<FooterProps> = ({ onViewChange }) => {
                       sessionStorage.setItem(RULES_TARGET_SECTION_KEY, link.ruleSection);
                     } catch {
                       // ignore storage access errors
+                    }
+                    try {
+                      window.dispatchEvent(new CustomEvent(RULES_TARGET_SECTION_EVENT, { detail: link.ruleSection }));
+                    } catch {
+                      // ignore event dispatch errors
                     }
                     navigateFromConfig(link.id, link.fallback, link.name);
                   }}

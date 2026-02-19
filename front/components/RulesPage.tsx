@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronRight, FileText, Download, ShieldAlert, Settings, Info, Leaf } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
 import { bbcodeToHtml } from '../utils/bbcode';
 
 const RULES_TARGET_SECTION_KEY = 'forsaj_rules_target_section';
+const RULES_TARGET_SECTION_EVENT = 'forsaj:rules-target-section';
 
 interface RuleSection {
   id: string;
@@ -22,6 +23,29 @@ const RulesPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string>('pilot');
   const { getText, getUrl, getPage } = useSiteContent('rulespage');
   const rulesPage = getPage('rulespage');
+
+  const normalizeTargetToken = useCallback((value: string) => (
+    (value || '')
+      .toLocaleLowerCase('az')
+      .replace(/ə/g, 'e')
+      .replace(/ı/g, 'i')
+      .replace(/ö/g, 'o')
+      .replace(/ü/g, 'u')
+      .replace(/ğ/g, 'g')
+      .replace(/ş/g, 's')
+      .replace(/ç/g, 'c')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '')
+  ), []);
+
+  const inferSectionByToken = useCallback((token: string) => {
+    if (token.includes('pilot')) return 'pilot';
+    if (token.includes('technical') || token.includes('texniki') || token.includes('normativ')) return 'technical';
+    if (token.includes('safety') || token.includes('tehlukesiz')) return 'safety';
+    if (token.includes('eco') || token.includes('ekoloji')) return 'eco';
+    return '';
+  }, []);
 
   const ruleSections: RuleSection[] = useMemo(() => {
     const tabField = /^RULE_TAB_(\d+)_(ID|TITLE|ICON|DOC_NAME|DOC_BUTTON|DOC_URL)$/;
@@ -186,54 +210,52 @@ const RulesPage: React.FC = () => {
     }
   }, [activeSection, ruleSections]);
 
+  const applyTargetSection = useCallback((rawTarget: string) => {
+    const target = (rawTarget || '').trim();
+    if (!target || !ruleSections.length) return;
+
+    const normalizedTarget = normalizeTargetToken(target);
+    const inferredTarget = inferSectionByToken(normalizedTarget);
+
+    const match = ruleSections.find((section) => {
+      const idToken = normalizeTargetToken(section.id);
+      const titleToken = normalizeTargetToken(section.title);
+      if (idToken === normalizedTarget || titleToken === normalizedTarget) return true;
+      if (inferredTarget && (idToken.includes(inferredTarget) || titleToken.includes(inferredTarget))) return true;
+      return false;
+    });
+
+    if (match) {
+      setActiveSection(match.id);
+    }
+  }, [inferSectionByToken, normalizeTargetToken, ruleSections]);
+
   useEffect(() => {
     if (!ruleSections.length) return;
-
-    const normalize = (value: string) =>
-      (value || '')
-        .toLocaleLowerCase('az')
-        .replace(/ə/g, 'e')
-        .replace(/ı/g, 'i')
-        .replace(/ö/g, 'o')
-        .replace(/ü/g, 'u')
-        .replace(/ğ/g, 'g')
-        .replace(/ş/g, 's')
-        .replace(/ç/g, 'c')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '');
-
-    const inferByToken = (token: string) => {
-      if (token.includes('pilot')) return 'pilot';
-      if (token.includes('technical') || token.includes('texniki') || token.includes('normativ')) return 'technical';
-      if (token.includes('safety') || token.includes('tehlukesiz')) return 'safety';
-      if (token.includes('eco') || token.includes('ekoloji')) return 'eco';
-      return '';
-    };
 
     try {
       const rawTarget = (sessionStorage.getItem(RULES_TARGET_SECTION_KEY) || '').trim();
       sessionStorage.removeItem(RULES_TARGET_SECTION_KEY);
       if (!rawTarget) return;
-
-      const normalizedTarget = normalize(rawTarget);
-      const inferredTarget = inferByToken(normalizedTarget);
-
-      const match = ruleSections.find((section) => {
-        const idToken = normalize(section.id);
-        const titleToken = normalize(section.title);
-        if (idToken === normalizedTarget || titleToken === normalizedTarget) return true;
-        if (inferredTarget && (idToken.includes(inferredTarget) || titleToken.includes(inferredTarget))) return true;
-        return false;
-      });
-
-      if (match) {
-        setActiveSection(match.id);
-      }
+      applyTargetSection(rawTarget);
     } catch {
       // ignore storage access errors
     }
-  }, [ruleSections]);
+  }, [applyTargetSection, ruleSections.length]);
+
+  useEffect(() => {
+    const onRulesTarget = (event: Event) => {
+      const payload = (event as CustomEvent<string | undefined>).detail;
+      if (typeof payload === 'string') {
+        applyTargetSection(payload);
+      }
+    };
+
+    window.addEventListener(RULES_TARGET_SECTION_EVENT, onRulesTarget as EventListener);
+    return () => {
+      window.removeEventListener(RULES_TARGET_SECTION_EVENT, onRulesTarget as EventListener);
+    };
+  }, [applyTargetSection]);
 
   const currentSection = ruleSections.find(s => s.id === activeSection) || ruleSections[0];
   const displayDocName = currentSection?.docName || `${activeSection.toUpperCase()}_PROTOKOLU.PDF`;
