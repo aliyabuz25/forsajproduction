@@ -484,6 +484,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
   }
 
   const plannedEvents = eventsData.filter(e => e.status === 'planned');
+  const pastEvents = eventsData.filter(e => e.status === 'past');
   const featuredEvent = plannedEvents[0];
 
   return (
@@ -571,31 +572,73 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-5">
-          {pastVideos.length === 0 ? (
-            <div className="col-span-full py-20 text-center text-gray-500 font-black italic uppercase tracking-widest">
-              {getText('NO_VIDEOS', 'HƏLƏ Kİ VİDEO ƏLAVƏ EDİLMƏYİB')}
-            </div>
-          ) : (
-            pastVideos.map((video) => (
-              <div
-                key={video.id}
-                onClick={() => setPlayingVideoId(video.videoId)}
-                className="group/video relative cursor-pointer aspect-[3/4] bg-[#111] border border-white/5 overflow-hidden rounded-sm hover:border-[#FF4D00]/40 transition-all shadow-xl"
-              >
-                <img
-                  src={video.thumbnail}
-                  className="w-full h-full object-cover grayscale opacity-30 transition-all duration-700 group-hover/video:grayscale-0 group-hover/video:opacity-100 group-hover/video:scale-105"
-                  alt={video.title}
-                />
-                <div className="absolute inset-0 bg-black/45 group-hover/video:bg-black/30 transition-colors"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="bg-black/45 backdrop-blur-sm p-3 rounded-full border border-white/20 group-hover/video:bg-[#FF4D00] group-hover/video:text-black transition-all">
-                    <PlayCircle size={44} strokeWidth={1.5} />
+        <div className="space-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {pastEvents.length === 0 ? (
+              <div className="col-span-full py-20 text-center text-gray-500 font-black italic uppercase tracking-widest">
+                {getText('NO_PAST_EVENTS', 'KEÇMİŞ TƏDBİR TAPILMADI')}
+              </div>
+            ) : (
+              pastEvents.map((event) => (
+                <div
+                  key={event.id}
+                  onClick={() => setSelectedEvent(event)}
+                  className="group relative cursor-pointer aspect-[4/5] bg-[#111] border border-white/5 overflow-hidden rounded-sm hover:border-[#FF4D00]/40 transition-all shadow-xl"
+                >
+                  <img
+                    src={event.img}
+                    className="w-full h-full object-cover grayscale opacity-40 transition-all duration-700 group-hover:grayscale-0 group-hover:opacity-90 group-hover:scale-105"
+                    alt={event.title}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+
+                  <div className="absolute top-5 left-5 bg-white text-black px-4 py-1.5 font-black italic text-[9px] transform -skew-x-12 shadow-lg">
+                    <span className="transform skew-x-12 block uppercase tracking-[0.2em]">
+                      {getText('STATUS_PAST', 'BAŞA ÇATIB')}
+                    </span>
+                  </div>
+
+                  <div className="absolute bottom-8 left-8 right-8">
+                    <div className="text-gray-400 font-black italic text-[10px] mb-2 uppercase tracking-widest">{event.date}</div>
+                    <h4 className="text-3xl font-black italic text-white uppercase leading-none tracking-tighter group-hover:text-[#FF4D00] transition-colors">
+                      {event.title}
+                    </h4>
+                    <div className="mt-6 bg-white/5 border border-white/10 text-white px-5 py-2 font-black italic text-[8px] inline-block transform -skew-x-12 group-hover:bg-[#FF4D00] group-hover:text-black transition-all">
+                      <span className="transform skew-x-12 block uppercase tracking-[0.2em]">{getText('BTN_VIEW_DETAILS', 'ƏTRAFLI BAX')}</span>
+                    </div>
                   </div>
                 </div>
+              ))
+            )}
+          </div>
+
+          {pastVideos.length > 0 && (
+            <div>
+              <div className="mb-6 text-[#FF4D00] font-black italic text-[11px] uppercase tracking-[0.3em]">
+                {getText('PAST_VIDEOS_TITLE', 'KEÇMİŞ TƏDBİR VİDEOLARI')}
               </div>
-            ))
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-5">
+                {pastVideos.map((video) => (
+                  <div
+                    key={video.id}
+                    onClick={() => setPlayingVideoId(video.videoId)}
+                    className="group/video relative cursor-pointer aspect-[3/4] bg-[#111] border border-white/5 overflow-hidden rounded-sm hover:border-[#FF4D00]/40 transition-all shadow-xl"
+                  >
+                    <img
+                      src={video.thumbnail}
+                      className="w-full h-full object-cover grayscale opacity-30 transition-all duration-700 group-hover/video:grayscale-0 group-hover/video:opacity-100 group-hover/video:scale-105"
+                      alt={video.title}
+                    />
+                    <div className="absolute inset-0 bg-black/45 group-hover/video:bg-black/30 transition-colors"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-black/45 backdrop-blur-sm p-3 rounded-full border border-white/20 group-hover/video:bg-[#FF4D00] group-hover/video:text-black transition-all">
+                        <PlayCircle size={44} strokeWidth={1.5} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}
