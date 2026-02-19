@@ -3963,18 +3963,51 @@ const VisualEditor: React.FC = () => {
                                         </select>
                                     </div>
                                     {eventForm.status === 'past' ? (
-                                        <div className="form-group full-span">
-                                            <label>YOUTUBE LİNKİ</label>
-                                            <input
-                                                type="text"
-                                                value={eventForm.youtubeUrl || ''}
-                                                onChange={(e) => handleEventChange('youtubeUrl', e.target.value, eventForm.id)}
-                                                placeholder="https://www.youtube.com/watch?v=..."
-                                            />
-                                            <div style={{ marginTop: '8px', fontSize: '12px', color: '#64748b' }}>
-                                                Keçmiş tədbir üçün yalnız tədbir adı və YouTube linki kifayətdir.
+                                        <>
+                                            <div className="form-group full-span">
+                                                <label>COVER ŞƏKİLİ</label>
+                                                <div style={{ width: '100%', height: '180px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#f8fafc', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {eventForm.img ? (
+                                                        <img src={eventForm.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <span style={{ color: '#94a3b8', fontSize: '12px' }}>Şəkil seçilməyib</span>
+                                                    )}
+                                                </div>
+                                                <div className="input-row">
+                                                    <input
+                                                        type="text"
+                                                        value={eventForm.img}
+                                                        onChange={(e) => handleEventChange('img', e.target.value, eventForm.id)}
+                                                        placeholder="Cover şəkil URL"
+                                                    />
+                                                    <input
+                                                        type="file"
+                                                        id="event-past-img"
+                                                        style={{ display: 'none' }}
+                                                        onChange={async (e) => {
+                                                            const f = e.target.files?.[0];
+                                                            if (f) {
+                                                                const url = await uploadImage(f);
+                                                                if (url) handleEventChange('img', url, eventForm.id);
+                                                            }
+                                                        }}
+                                                    />
+                                                    <button type="button" onClick={() => document.getElementById('event-past-img')?.click()} className="btn-secondary">Yüklə</button>
+                                                </div>
                                             </div>
-                                        </div>
+                                            <div className="form-group full-span">
+                                                <label>YOUTUBE LİNKİ</label>
+                                                <input
+                                                    type="text"
+                                                    value={eventForm.youtubeUrl || ''}
+                                                    onChange={(e) => handleEventChange('youtubeUrl', e.target.value, eventForm.id)}
+                                                    placeholder="https://www.youtube.com/watch?v=..."
+                                                />
+                                                <div style={{ marginTop: '8px', fontSize: '12px', color: '#64748b' }}>
+                                                    Keçmiş tədbir üçün ad, cover və YouTube linki kifayətdir.
+                                                </div>
+                                            </div>
+                                        </>
                                     ) : (
                                         <>
                                             <div className="form-group full-span">
