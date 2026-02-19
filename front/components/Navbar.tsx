@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Globe, ChevronDown } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
 
@@ -11,6 +11,59 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
   const { getPage, getText, language, setSiteLanguage } = useSiteContent('navbar');
   const { getImage: getImageGeneral } = useSiteContent('general');
   const [isLangOpen, setIsLangOpen] = useState(false);
+  const GOOGLE_TRANSLATE_CONTAINER_ID = 'google_translate_element';
+  const GOOGLE_TRANSLATE_SCRIPT_ID = 'google-translate-script';
+  const languageMap: Record<string, string> = { AZ: 'az', RU: 'ru', ENG: 'en' };
+
+  const ensureGoogleTranslate = () => {
+    const w = window as any;
+    const mountTranslate = () => {
+      if (!w.google?.translate?.TranslateElement) return;
+      const container = document.getElementById(GOOGLE_TRANSLATE_CONTAINER_ID);
+      if (!container) return;
+      if (container.childElementCount > 0) return;
+      new w.google.translate.TranslateElement(
+        {
+          pageLanguage: 'az',
+          autoDisplay: false,
+          includedLanguages: 'az,ru,en'
+        },
+        GOOGLE_TRANSLATE_CONTAINER_ID
+      );
+    };
+
+    w.googleTranslateElementInit = mountTranslate;
+    mountTranslate();
+
+    if (!document.getElementById(GOOGLE_TRANSLATE_SCRIPT_ID)) {
+      const script = document.createElement('script');
+      script.id = GOOGLE_TRANSLATE_SCRIPT_ID;
+      script.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  };
+
+  const applyGoogleLanguage = (langCode: string) => {
+    const tryApply = (attempt = 0) => {
+      const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
+      if (select) {
+        select.value = langCode;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
+      }
+      if (attempt < 20) {
+        window.setTimeout(() => tryApply(attempt + 1), 250);
+      }
+    };
+
+    ensureGoogleTranslate();
+    tryApply();
+  };
+
+  useEffect(() => {
+    ensureGoogleTranslate();
+  }, []);
 
   const navbarPage = getPage('navbar');
   const logoImg = getImageGeneral('SITE_LOGO_LIGHT').path;
@@ -226,6 +279,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
                 key={lang}
                 onClick={() => {
                   setSiteLanguage(lang as any);
+                  applyGoogleLanguage(languageMap[lang] || 'az');
                   setIsLangOpen(false);
                 }}
                 className={`w-full text-left px-5 py-3 text-[10px] font-black italic hover:bg-[#FF4D00] hover:text-black transition-all ${language === lang ? 'text-[#FF4D00]' : 'text-gray-500'
@@ -237,6 +291,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
           </div>
         )}
       </div>
+      <div id={GOOGLE_TRANSLATE_CONTAINER_ID} style={{ display: 'none' }} />
     </nav>
   );
 };
