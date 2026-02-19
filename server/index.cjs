@@ -499,6 +499,24 @@ const normalizeListPayload = (value) => {
 };
 
 const normalizeSettingId = (value) => String(value || '').trim().toUpperCase();
+const normalizeKeyToken = (value) => String(value || '')
+    .trim()
+    .replace(/^KEY:\s*/i, '')
+    .replace(/\.\.\.$/, '')
+    .toUpperCase();
+const isPlaceholderToken = (value) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return false;
+    return /^[A-Z0-9_]+$/.test(trimmed) || /^KEY:\s*[A-Z0-9_]+$/i.test(trimmed);
+};
+const isLikelyAssetPath = (value) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return false;
+    if (/^https?:\/\//i.test(trimmed)) return true;
+    if (trimmed.startsWith('/')) return true;
+    if (/^(uploads|assets|images)\//i.test(trimmed)) return true;
+    return /\.(png|jpe?g|webp|svg|gif|avif)(\?.*)?$/i.test(trimmed);
+};
 const toBoolean = (value, fallback = false) => {
     if (typeof value === 'boolean') return value;
     const normalized = String(value || '').trim().toLowerCase();
@@ -508,20 +526,60 @@ const toBoolean = (value, fallback = false) => {
 
 const resolveGeneralSettingValue = (siteContent, key, fallback = '') => {
     if (!Array.isArray(siteContent)) return fallback;
-    const generalPage = siteContent.find((page) => String(page?.id || '').trim().toLowerCase() === 'general');
-    if (!generalPage || !Array.isArray(generalPage.sections)) return fallback;
-    const target = generalPage.sections.find((section) => normalizeSettingId(section?.id) === normalizeSettingId(key));
-    const value = String(target?.value || '').trim();
-    return value || fallback;
+    const wanted = normalizeSettingId(key);
+    const byPriority = ['general', 'app', 'navbar', 'footer'];
+    const pages = [
+        ...siteContent.filter((page) => byPriority.includes(String(page?.id || '').trim().toLowerCase())),
+        ...siteContent.filter((page) => !byPriority.includes(String(page?.id || '').trim().toLowerCase()))
+    ];
+
+    const candidates = [];
+    for (const page of pages) {
+        const sections = Array.isArray(page?.sections) ? page.sections : [];
+        for (const section of sections) {
+            const sectionId = normalizeSettingId(section?.id);
+            const sectionLabel = normalizeKeyToken(section?.label);
+            if (sectionId !== wanted && sectionLabel !== wanted) continue;
+            const value = String(section?.value || '').trim();
+            if (value) candidates.push(value);
+        }
+    }
+
+    const preferred = candidates.find((value) => !isPlaceholderToken(value));
+    return preferred || fallback;
 };
 
 const resolveGeneralImagePath = (siteContent, key, fallback = '') => {
     if (!Array.isArray(siteContent)) return fallback;
-    const generalPage = siteContent.find((page) => String(page?.id || '').trim().toLowerCase() === 'general');
-    if (!generalPage || !Array.isArray(generalPage.images)) return fallback;
-    const target = generalPage.images.find((image) => normalizeSettingId(image?.id) === normalizeSettingId(key));
-    const value = String(target?.path || '').trim();
-    return value || fallback;
+    const wanted = normalizeSettingId(key);
+    const byPriority = ['general', 'app', 'navbar', 'footer'];
+    const pages = [
+        ...siteContent.filter((page) => byPriority.includes(String(page?.id || '').trim().toLowerCase())),
+        ...siteContent.filter((page) => !byPriority.includes(String(page?.id || '').trim().toLowerCase()))
+    ];
+
+    const candidates = [];
+    for (const page of pages) {
+        const images = Array.isArray(page?.images) ? page.images : [];
+        for (const image of images) {
+            const imageId = normalizeSettingId(image?.id);
+            if (imageId !== wanted) continue;
+            const imagePath = String(image?.path || '').trim();
+            if (imagePath) candidates.push(imagePath);
+        }
+
+        const sections = Array.isArray(page?.sections) ? page.sections : [];
+        for (const section of sections) {
+            const sectionId = normalizeSettingId(section?.id);
+            const sectionLabel = normalizeKeyToken(section?.label);
+            if (sectionId !== wanted && sectionLabel !== wanted) continue;
+            const sectionValue = String(section?.value || '').trim();
+            if (sectionValue && isLikelyAssetPath(sectionValue)) candidates.push(sectionValue);
+        }
+    }
+
+    const preferred = candidates.find((value) => !isPlaceholderToken(value));
+    return preferred || fallback;
 };
 
 const getOriginFromUrl = (value) => {
@@ -535,10 +593,34 @@ const getOriginFromUrl = (value) => {
 const toAbsoluteUrlWithBase = (baseUrl, rawPath) => {
     const value = String(rawPath || '').trim();
     if (!value) return '';
+    if (isPlaceholderToken(value)) return '';
     if (/^https?:\/\//i.test(value)) return value;
     const base = String(baseUrl || '').trim();
     if (!base) return value;
-    return `${base}${value.startsWith('/') ? value : `/${value}`}`;
+    try {
+        return new URL(value, base.endsWith('/') ? base : `${base}/`).toString();
+    } catch {
+        return `${base}${value.startsWith('/') ? value : `/${value}`}`;
+    }
+};
+
+const resolveInlineLogoAttachment = (logoSource) => {
+    const raw = String(logoSource || '').trim();
+    if (!raw) return { src: '', attachments: [] };
+    if (/^https?:\/\//i.test(raw) || /^cid:/i.test(raw)) return { src: raw, attachments: [] };
+
+    const clean = raw.split('?')[0].split('#')[0];
+    const relativePath = clean.startsWith('/') ? clean.slice(1) : clean;
+    const localFilePath = path.resolve(FRONT_PUBLIC_DIR, relativePath);
+    const safeBase = path.resolve(FRONT_PUBLIC_DIR);
+    if (!localFilePath.startsWith(safeBase)) return { src: raw, attachments: [] };
+    if (!fs.existsSync(localFilePath)) return { src: raw, attachments: [] };
+
+    const cid = 'forsaj-site-logo@inline';
+    return {
+        src: `cid:${cid}`,
+        attachments: [{ filename: path.basename(localFilePath), path: localFilePath, cid }]
+    };
 };
 
 const resolveSmtpSettings = async () => {
@@ -695,13 +777,21 @@ const sendApplicationNotificationEmail = async ({ name, contact, type, content }
     const safeDate = escapeHtml(createdAt);
     const safeSiteName = escapeHtml(smtp.siteName || 'Forsaj Club');
     const safeSiteUrl = escapeHtml(siteUrlText);
-    const headerLogo = smtp.logoUrl
-        ? `<img src="${escapeHtml(smtp.logoUrl)}" alt="${safeSiteName}" style="max-height:44px;width:auto;display:block;" />`
+    const hasPublicSiteUrl = /^https?:\/\//i.test(siteUrlText);
+    const logoAsset = resolveInlineLogoAttachment(smtp.logoUrl);
+    const headerLogo = logoAsset.src
+        ? `<img src="${escapeHtml(logoAsset.src)}" alt="${safeSiteName}" style="height:46px;max-width:240px;width:auto;display:block;object-fit:contain;" />`
         : `<div style="font-size:22px;font-weight:900;letter-spacing:0.02em;color:#f9fafb;">${safeSiteName}</div>`;
 
     const htmlBody = `
-      <div style="background:#030712;padding:28px 0;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
-        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:700px;margin:0 auto;background:#0b1220;border-radius:16px;overflow:hidden;border:1px solid #1f2937;">
+      <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${safeSiteName} yeni form müraciəti bildirişi</div>
+      <div style="background:#020617;padding:28px 0;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:720px;margin:0 auto;background:#0b1220;border-radius:16px;overflow:hidden;border:1px solid #1e293b;">
+          <tr>
+            <td style="background:#020617;padding:0;">
+              <div style="height:4px;background:linear-gradient(90deg,#f97316,#fb923c,#fdba74);"></div>
+            </td>
+          </tr>
           <tr>
             <td style="background:#050505;padding:24px 30px;border-bottom:1px solid #1f2937;">
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
@@ -715,6 +805,7 @@ const sendApplicationNotificationEmail = async ({ name, contact, type, content }
           <tr>
             <td style="padding:30px;">
               <h2 style="margin:0 0 18px;font-size:24px;line-height:1.3;color:#f9fafb;">Yeni müraciət daxil oldu</h2>
+              <p style="margin:0 0 22px;color:#94a3b8;font-size:13px;line-height:1.6;">Bu bildiriş sayt formundan avtomatik yaradılıb. Aşağıdakı məlumatlar birbaşa istifadəçi müraciətindən götürülüb.</p>
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:18px;">
                 <tr><td style="padding:8px 0;color:#9ca3af;font-size:12px;width:140px;text-transform:uppercase;letter-spacing:0.06em;">Ad Soyad</td><td style="padding:8px 0;color:#f9fafb;font-size:14px;font-weight:700;">${safeName}</td></tr>
                 <tr><td style="padding:8px 0;color:#9ca3af;font-size:12px;width:140px;text-transform:uppercase;letter-spacing:0.06em;">Əlaqə</td><td style="padding:8px 0;color:#f9fafb;font-size:14px;font-weight:700;">${safeContact}</td></tr>
@@ -730,7 +821,7 @@ const sendApplicationNotificationEmail = async ({ name, contact, type, content }
           </tr>
           <tr>
             <td style="background:#050505;border-top:1px solid #1f2937;padding:14px 30px;color:#9ca3af;font-size:12px;">
-              ${safeSiteName}${siteUrlText ? ` • <a href="${safeSiteUrl}" style="color:#f97316;text-decoration:none;">${safeSiteUrl}</a>` : ''}
+              ${safeSiteName}${hasPublicSiteUrl ? ` • <a href="${safeSiteUrl}" style="color:#f97316;text-decoration:none;">${safeSiteUrl}</a>` : ''} • Professional Notification
             </td>
           </tr>
         </table>
@@ -742,7 +833,8 @@ const sendApplicationNotificationEmail = async ({ name, contact, type, content }
         to: smtp.toList.join(', '),
         subject,
         text: textBody,
-        html: htmlBody
+        html: htmlBody,
+        attachments: logoAsset.attachments
     });
 
     return { sent: true };
