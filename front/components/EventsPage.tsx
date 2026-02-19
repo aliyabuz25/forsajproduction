@@ -5,6 +5,8 @@ import { bbcodeToHtml } from '../utils/bbcode';
 import toast from 'react-hot-toast';
 import CsPlayer from './CsPlayer';
 
+const EVENTS_TARGET_EVENT_KEY = 'forsaj_events_target_event';
+
 interface EventItem {
   id: number;
   title: string;
@@ -121,6 +123,46 @@ const EventsPage: React.FC<EventsPageProps> = ({ onViewChange }) => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [selectedEvent]);
+
+  useEffect(() => {
+    if (!eventsData.length) return;
+
+    try {
+      const raw = (sessionStorage.getItem(EVENTS_TARGET_EVENT_KEY) || '').trim();
+      if (!raw) return;
+      sessionStorage.removeItem(EVENTS_TARGET_EVENT_KEY);
+
+      let targetId: number | null = null;
+      let targetTitle = '';
+      let targetDate = '';
+
+      try {
+        const parsed = JSON.parse(raw) as { id?: number; title?: string; date?: string };
+        targetId = typeof parsed.id === 'number' ? parsed.id : null;
+        targetTitle = String(parsed.title || '').trim().toLocaleLowerCase('az');
+        targetDate = String(parsed.date || '').trim();
+      } catch {
+        const asNumber = Number(raw);
+        if (!Number.isNaN(asNumber)) targetId = asNumber;
+      }
+
+      const byId = targetId ? eventsData.find((event) => event.id === targetId) : null;
+      const byTitleDate = !byId
+        ? eventsData.find((event) => {
+            const title = (event.title || '').trim().toLocaleLowerCase('az');
+            return (!!targetTitle && title === targetTitle) || (!!targetDate && event.date === targetDate);
+          })
+        : null;
+      const match = byId || byTitleDate;
+
+      if (match) {
+        setActiveTab(match.status === 'past' ? 'past' : 'planned');
+        setSelectedEvent(match);
+      }
+    } catch {
+      // ignore storage access errors
+    }
+  }, [eventsData]);
 
   const VideoModal = () => {
     if (!playingVideoId) return null;

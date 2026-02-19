@@ -79,6 +79,8 @@ interface GalleryPhotoItem {
     id: number;
     title: string;
     url: string;
+    album?: string;
+    eventId?: number | null;
 }
 
 interface DriverCategory {
@@ -86,6 +88,39 @@ interface DriverCategory {
     name: string;
     drivers: DriverItem[];
 }
+
+const DEFAULT_PHOTO_ALBUM = 'Ümumi Arxiv';
+
+const normalizePhotoAlbum = (value?: string) => {
+    const cleaned = (value || '').trim();
+    return cleaned || DEFAULT_PHOTO_ALBUM;
+};
+
+const toSafePhotoId = (rawId: unknown, fallback: number) => {
+    const numeric = Number(rawId);
+    return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+const normalizeGalleryPhotoItem = (item: any, index: number): GalleryPhotoItem => {
+    const safeId = toSafePhotoId(item?.id, Date.now() + index + 1);
+    const safeTitle = String(item?.title || item?.alt || `Şəkil ${index + 1}`).trim();
+    const safeUrl = String(item?.url || item?.path || '').trim();
+    const eventIdRaw = Number(item?.eventId ?? item?.event_id);
+    const safeEventId = Number.isFinite(eventIdRaw) ? eventIdRaw : null;
+    const safeAlbum = normalizePhotoAlbum(
+        typeof item?.album === 'string'
+            ? item.album
+            : (typeof item?.event === 'string' ? item.event : '')
+    );
+
+    return {
+        id: safeId,
+        title: safeTitle || `Şəkil ${index + 1}`,
+        url: safeUrl,
+        album: safeAlbum,
+        eventId: safeEventId
+    };
+};
 
 const QUILL_MODULES = {
     toolbar: [
@@ -607,6 +642,11 @@ const VisualEditor: React.FC = () => {
     const autoSyncTriggeredRef = useRef(false);
     const [selectedPhotoId, setSelectedPhotoId] = useState<number | null>(null);
     const [photoForm, setPhotoForm] = useState<Partial<GalleryPhotoItem>>({});
+    const [selectedPhotoAlbum, setSelectedPhotoAlbum] = useState<string>(DEFAULT_PHOTO_ALBUM);
+    const [selectedPhotoEventId, setSelectedPhotoEventId] = useState<string>('');
+    const [photoAlbumFilter, setPhotoAlbumFilter] = useState<string>('all');
+    const [newPhotoAlbumName, setNewPhotoAlbumName] = useState<string>('');
+    const galleryMultiUploadInputRef = useRef<HTMLInputElement | null>(null);
     const [homeEditTab, setHomeEditTab] = useState<HomeEditTab>('all');
 
     useEffect(() => {
@@ -1317,7 +1357,14 @@ const VisualEditor: React.FC = () => {
                 }
             }
 
-            if (Array.isArray(photosData)) setGalleryPhotos(photosData);
+            if (Array.isArray(photosData)) {
+                const normalizedPhotos = photosData.map((item: any, index: number) => normalizeGalleryPhotoItem(item, index));
+                setGalleryPhotos(normalizedPhotos);
+                if (normalizedPhotos.length === 0) {
+                    setSelectedPhotoId(null);
+                    setPhotoForm({});
+                }
+            }
 
             if (Array.isArray(videosData)) {
                 setVideos(videosData);
@@ -2448,21 +2495,73 @@ const VisualEditor: React.FC = () => {
         return (match && match[2].length === 11) ? match[2] : null;
     };
 
+    const getNextGalleryPhotoId = (items: GalleryPhotoItem[] = galleryPhotos) => {
+        const maxId = items.reduce((max, item) => {
+            const numeric = Number(item.id);
+            if (!Number.isFinite(numeric)) return max;
+            return numeric > max ? numeric : max;
+        }, 0);
+        return maxId + 1;
+    };
+
     const handlePhotoSelect = (id: number) => {
         setSelectedPhotoId(id);
         const item = galleryPhotos.find(p => p.id === id);
-        if (item) setPhotoForm({ ...item });
+        if (item) {
+            const normalizedAlbum = normalizePhotoAlbum(item.album);
+            const linkedEvent = item.eventId
+                ? events.find((evt) => evt.id === item.eventId)
+                : events.find((evt) => normalizePhotoAlbum(evt.title) === normalizedAlbum);
+            setPhotoForm({ ...item, album: normalizedAlbum });
+            setSelectedPhotoAlbum(normalizedAlbum);
+            setSelectedPhotoEventId(linkedEvent ? String(linkedEvent.id) : '');
+        }
+    };
+
+    const createOrSelectPhotoAlbum = () => {
+        const rawName = newPhotoAlbumName.trim();
+        if (!rawName) {
+            toast.error('Albom adı daxil edin');
+            return;
+        }
+        const normalizedAlbum = normalizePhotoAlbum(rawName);
+        setSelectedPhotoAlbum(normalizedAlbum);
+        setPhotoAlbumFilter(normalizedAlbum);
+        setNewPhotoAlbumName('');
+        toast.success(`Albom seçildi: ${normalizedAlbum}`);
+    };
+
+    const handlePhotoAlbumFromEventChange = (rawEventId: string) => {
+        setSelectedPhotoEventId(rawEventId);
+        if (!rawEventId) return;
+
+        const numericId = Number(rawEventId);
+        if (!Number.isFinite(numericId)) return;
+
+        const linkedEvent = events.find((evt) => evt.id === numericId);
+        if (!linkedEvent) return;
+
+        const normalizedAlbum = normalizePhotoAlbum(linkedEvent.title);
+        setSelectedPhotoAlbum(normalizedAlbum);
+        setPhotoAlbumFilter(normalizedAlbum);
     };
 
     const addGalleryPhoto = () => {
-        const newId = Date.now();
+        const newId = getNextGalleryPhotoId();
+        const normalizedAlbum = normalizePhotoAlbum(selectedPhotoAlbum);
+        const numericEventId = Number(selectedPhotoEventId);
+        const linkedEventId = selectedPhotoEventId && Number.isFinite(numericEventId) ? numericEventId : null;
         const newItem: GalleryPhotoItem = {
             id: newId,
             title: 'Yeni Şəkil',
-            url: ''
+            url: '',
+            album: normalizedAlbum,
+            eventId: linkedEventId
         };
         setGalleryPhotos(prev => [...prev, newItem]);
-        handlePhotoSelect(newId);
+        setPhotoAlbumFilter(normalizedAlbum);
+        setSelectedPhotoId(newId);
+        setPhotoForm({ ...newItem });
     };
 
     const deleteGalleryPhoto = async (id: any, e: React.MouseEvent) => {
@@ -2483,9 +2582,39 @@ const VisualEditor: React.FC = () => {
     const handlePhotoChange = (field: keyof GalleryPhotoItem, value: string) => {
         setPhotoForm(prev => {
             const updatedForm = { ...prev, [field]: value } as GalleryPhotoItem;
-            if (selectedPhotoId) {
+
+            if (field === 'album') {
+                updatedForm.album = normalizePhotoAlbum(value);
+                setSelectedPhotoAlbum(updatedForm.album);
+            }
+
+            if (selectedPhotoId !== null) {
                 setGalleryPhotos(old => old.map(p => p.id === selectedPhotoId ? updatedForm : p));
             }
+            return updatedForm;
+        });
+    };
+
+    const handlePhotoEventLinkChange = (rawEventId: string) => {
+        const numericId = Number(rawEventId);
+        const linkedEventId = rawEventId && Number.isFinite(numericId) ? numericId : null;
+        const linkedEvent = linkedEventId !== null ? events.find((evt) => evt.id === linkedEventId) : null;
+
+        setSelectedPhotoEventId(rawEventId);
+
+        setPhotoForm(prev => {
+            const updatedForm = {
+                ...prev,
+                eventId: linkedEventId,
+                album: linkedEvent ? normalizePhotoAlbum(linkedEvent.title) : normalizePhotoAlbum(prev.album)
+            } as GalleryPhotoItem;
+
+            setSelectedPhotoAlbum(updatedForm.album || DEFAULT_PHOTO_ALBUM);
+
+            if (selectedPhotoId !== null) {
+                setGalleryPhotos(old => old.map(p => p.id === selectedPhotoId ? updatedForm : p));
+            }
+
             return updatedForm;
         });
     };
@@ -2498,6 +2627,54 @@ const VisualEditor: React.FC = () => {
         if (url) {
             handlePhotoChange('url', url);
         }
+    };
+
+    const handleMultiPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+
+        const baseAlbum = normalizePhotoAlbum(selectedPhotoAlbum);
+        const numericEventId = Number(selectedPhotoEventId);
+        const linkedEventId = selectedPhotoEventId && Number.isFinite(numericEventId) ? numericEventId : null;
+
+        let nextId = getNextGalleryPhotoId();
+        const uploadedItems: GalleryPhotoItem[] = [];
+
+        for (const file of files) {
+            const url = await uploadImage(file);
+            if (!url) continue;
+
+            const fileTitle = (file.name || '')
+                .replace(/\.[^/.]+$/, '')
+                .trim() || `Şəkil ${nextId}`;
+
+            uploadedItems.push({
+                id: nextId,
+                title: fileTitle,
+                url,
+                album: baseAlbum,
+                eventId: linkedEventId
+            });
+            nextId += 1;
+        }
+
+        if (!uploadedItems.length) {
+            toast.error('Şəkillər yüklənmədi');
+            e.target.value = '';
+            return;
+        }
+
+        setGalleryPhotos((prev) => [...prev, ...uploadedItems]);
+        setPhotoAlbumFilter(baseAlbum);
+        setSelectedPhotoId(uploadedItems[0].id);
+        setPhotoForm({ ...uploadedItems[0] });
+        toast.success(`${uploadedItems.length} şəkil "${baseAlbum}" albomuna əlavə edildi`);
+
+        if (uploadedItems.length !== files.length) {
+            toast.error(`${files.length - uploadedItems.length} fayl yüklənmədi`);
+        }
+
+        e.target.value = '';
     };
 
     const addNewVideo = () => {
@@ -3293,9 +3470,34 @@ const VisualEditor: React.FC = () => {
     const filteredVideos = videos.filter((item) =>
         matchesSearch(item.title, item.duration, item.youtubeUrl, item.videoId, item.created_at)
     );
-    const filteredPhotos = galleryPhotos.filter((item) =>
-        matchesSearch(item.title, item.url)
-    );
+    const eventAlbumOptions = events
+        .map((event) => ({
+            eventId: event.id,
+            album: normalizePhotoAlbum(event.title)
+        }))
+        .filter((entry, index, array) =>
+            array.findIndex((candidate) => candidate.album === entry.album) === index
+        );
+
+    const availablePhotoAlbums = Array.from(new Set([
+        DEFAULT_PHOTO_ALBUM,
+        ...eventAlbumOptions.map((entry) => entry.album),
+        ...galleryPhotos.map((item) => normalizePhotoAlbum(item.album)),
+        normalizePhotoAlbum(selectedPhotoAlbum),
+        normalizePhotoAlbum(typeof photoForm.album === 'string' ? photoForm.album : '')
+    ]))
+        .filter((album) => !!album.trim())
+        .sort((a, b) => a.localeCompare(b, 'az'));
+
+    const activePhotoAlbumFilter = photoAlbumFilter === 'all'
+        ? 'all'
+        : normalizePhotoAlbum(photoAlbumFilter);
+
+    const filteredPhotos = galleryPhotos.filter((item) => {
+        const itemAlbum = normalizePhotoAlbum(item.album);
+        const albumMatches = activePhotoAlbumFilter === 'all' || itemAlbum === activePhotoAlbumFilter;
+        return albumMatches && matchesSearch(item.title, item.url, itemAlbum);
+    });
 
     const resetAllCollapsedPanels = () => {
         setGroupedPageCollapsed({});
@@ -4062,11 +4264,82 @@ const VisualEditor: React.FC = () => {
             ) : editorMode === 'photos' ? (
                 <div className="editor-layout with-sidebar">
                     <aside className="page-list">
-                        <div className="list-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <h3>Foto Arxiv</h3>
-                            <button className="add-section-btn" onClick={addGalleryPhoto} title="Yeni şəkil əlavə et">
-                                <Plus size={16} />
-                            </button>
+                        <div className="list-header" style={{ marginBottom: '1rem' }}>
+                            <h3 style={{ marginBottom: '0.75rem' }}>Foto Arxiv</h3>
+                            <div style={{ display: 'grid', gap: '8px' }}>
+                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>EVENT ALBOMU</label>
+                                <select
+                                    value={selectedPhotoEventId}
+                                    onChange={(e) => handlePhotoAlbumFromEventChange(e.target.value)}
+                                    style={{ width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                >
+                                    <option value="">Event seçilməyib</option>
+                                    {events.map((event) => (
+                                        <option key={event.id} value={String(event.id)}>
+                                            {event.title}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginTop: '4px' }}>YENİ ALBOM</label>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <input
+                                        type="text"
+                                        value={newPhotoAlbumName}
+                                        onChange={(e) => setNewPhotoAlbumName(e.target.value)}
+                                        placeholder="Məs: Bakı Ralli 2026"
+                                        style={{ flex: 1, minWidth: 0, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={createOrSelectPhotoAlbum}
+                                        style={{ padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
+                                    >
+                                        Seç
+                                    </button>
+                                </div>
+
+                                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginTop: '4px' }}>ALBOM FİLTRİ</label>
+                                <select
+                                    value={photoAlbumFilter}
+                                    onChange={(e) => setPhotoAlbumFilter(e.target.value)}
+                                    style={{ width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                >
+                                    <option value="all">Bütün albomlar</option>
+                                    {availablePhotoAlbums.map((album) => (
+                                        <option key={album} value={album}>
+                                            {album}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                                    <button
+                                        className="add-section-btn"
+                                        onClick={addGalleryPhoto}
+                                        title="Yeni şəkil əlavə et"
+                                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                    >
+                                        <Plus size={14} />
+                                        Yeni
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => galleryMultiUploadInputRef.current?.click()}
+                                        style={{ flex: 1, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
+                                    >
+                                        Çoxlu Yüklə
+                                    </button>
+                                    <input
+                                        ref={galleryMultiUploadInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        style={{ display: 'none' }}
+                                        onChange={handleMultiPhotoUpload}
+                                    />
+                                </div>
+                            </div>
                         </div>
                         <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
                             {filteredPhotos.length === 0 ? (
@@ -4079,12 +4352,17 @@ const VisualEditor: React.FC = () => {
                                         <button
                                             className={`page-nav-item ${selectedPhotoId === photo.id ? 'active' : ''}`}
                                             onClick={() => handlePhotoSelect(photo.id)}
-                                            style={{ width: '100%', paddingRight: '40px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                            style={{ width: '100%', paddingRight: '40px', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left' }}
                                         >
                                             <div style={{ width: '24px', height: '24px', borderRadius: '4px', overflow: 'hidden', flexShrink: 0, background: '#eee' }}>
                                                 {photo.url ? <img src={photo.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <ImageIcon size={12} style={{ margin: '6px', opacity: 0.3 }} />}
                                             </div>
-                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{photo.title}</span>
+                                            <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{photo.title}</span>
+                                                <span style={{ fontSize: '10px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {normalizePhotoAlbum(photo.album)}
+                                                </span>
+                                            </div>
                                         </button>
                                         <button
                                             className="delete-section-btn"
@@ -4116,6 +4394,33 @@ const VisualEditor: React.FC = () => {
                                             onChange={(e) => handlePhotoChange('title', e.target.value)}
                                             style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold' }}
                                         />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '12px', color: '#64748b' }}>ALBOM</label>
+                                        <input
+                                            type="text"
+                                            value={photoForm.album || ''}
+                                            onChange={(e) => handlePhotoChange('album', e.target.value)}
+                                            placeholder="Məs: Bakı Ralli 2026"
+                                            style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px' }}
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '12px', color: '#64748b' }}>EVENT BAĞLANTISI (İSTƏYƏ BAĞLI)</label>
+                                        <select
+                                            value={selectedPhotoEventId}
+                                            onChange={(e) => handlePhotoEventLinkChange(e.target.value)}
+                                            style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px' }}
+                                        >
+                                            <option value="">Event seçilməyib</option>
+                                            {events.map((event) => (
+                                                <option key={event.id} value={String(event.id)}>
+                                                    {event.title}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
 
                                     <div className="form-group">

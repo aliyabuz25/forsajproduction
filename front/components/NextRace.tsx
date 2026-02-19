@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, ChevronRight } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
 
+const EVENTS_TARGET_EVENT_KEY = 'forsaj_events_target_event';
+
 interface NextRaceProps {
   onViewChange: (view: any) => void;
 }
@@ -115,6 +117,32 @@ const NextRace: React.FC<NextRaceProps> = ({ onViewChange }) => {
     onViewChange(fallback as any);
   };
 
+  const saveTargetEventAndNavigate = (rawTarget: string, fallbackView: string) => {
+    const value = (rawTarget || '').trim();
+    const resolved =
+      resolveView(value) ||
+      resolveViewFromUrl(value) ||
+      resolveViewFromUrl(value.startsWith('/') ? value : `/${value}`);
+    const targetView = (resolved || (value ? '' : fallbackView)) as string;
+
+    if (targetView === 'events' && nextEvent) {
+      try {
+        sessionStorage.setItem(
+          EVENTS_TARGET_EVENT_KEY,
+          JSON.stringify({
+            id: nextEvent.id,
+            title: nextEvent.title,
+            date: nextEvent.date
+          })
+        );
+      } catch {
+        // ignore storage access errors
+      }
+    }
+
+    navigateFromConfig(rawTarget, fallbackView);
+  };
+
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -205,7 +233,7 @@ const NextRace: React.FC<NextRaceProps> = ({ onViewChange }) => {
 
           <button
             onClick={() => {
-              navigateFromConfig(getUrl('REGISTER_BTN', 'events'), 'events');
+              saveTargetEventAndNavigate(getUrl('REGISTER_BTN', 'events'), 'events');
             }}
             className="bg-[#FF4D00] hover:bg-white text-black font-black italic py-5 px-12 rounded-sm flex items-center gap-3 transition-all self-start transform -skew-x-12 group shadow-[0_10px_30px_rgba(255,77,0,0.2)]"
           >
