@@ -16,6 +16,10 @@ interface NewsProps {
 }
 
 const SELECTED_NEWS_ID_KEY = 'forsaj_selected_news_id';
+const normalizeRichTextSpacing = (value: unknown) =>
+  String(value ?? '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\u00a0/g, ' ');
 
 const News: React.FC<NewsProps> = ({ onViewChange }) => {
   const { getText } = useSiteContent('news');
@@ -49,7 +53,15 @@ const News: React.FC<NewsProps> = ({ onViewChange }) => {
             .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .slice(0, 3);
 
-          setNewsData(publishedNews);
+          const mapped = publishedNews.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            date: item.date,
+            img: item.img,
+            description: normalizeRichTextSpacing(item.description)
+          }));
+
+          setNewsData(mapped);
         }
       } catch (err) {
         console.error('Failed to load news from API', err);
@@ -103,7 +115,7 @@ const News: React.FC<NewsProps> = ({ onViewChange }) => {
                 {mainNews.title}
               </h3>
               <div
-                className="text-gray-400 font-bold italic text-xs md:text-base uppercase tracking-wide max-w-xl quill-content"
+                className="text-gray-400 font-bold italic text-xs md:text-base uppercase tracking-wide max-w-xl quill-content break-words overflow-hidden [overflow-wrap:anywhere] [&_*]:max-w-full [&_*]:whitespace-normal [&_*]:break-words [&_*]:[overflow-wrap:anywhere]"
                 dangerouslySetInnerHTML={{ __html: bbcodeToHtml(mainNews.description) }}
               />
             </div>
@@ -131,7 +143,7 @@ const News: React.FC<NewsProps> = ({ onViewChange }) => {
                     {news.title}
                   </h4>
                   <div
-                    className="text-gray-500 text-[10px] font-bold italic uppercase tracking-wider quill-content"
+                    className="text-gray-500 text-[10px] font-bold italic uppercase tracking-wider quill-content break-words overflow-hidden [overflow-wrap:anywhere] [&_*]:max-w-full [&_*]:whitespace-normal [&_*]:break-words [&_*]:[overflow-wrap:anywhere]"
                     dangerouslySetInnerHTML={{ __html: bbcodeToHtml(news.description) }}
                   />
                 </div>
