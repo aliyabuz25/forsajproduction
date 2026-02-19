@@ -1296,20 +1296,20 @@ const VisualEditor: React.FC = () => {
                     ...page,
                     sections: (page.sections || [])
                         .map((section, sectionIndex) => {
-                        if (section.type !== 'text') return section;
+                            if (section.type !== 'text') return section;
 
-                        const forcePlain = shouldForcePlainText(section);
-                        const nextValue = forcePlain ? normalizePlainText(section.value || '') : (section.value || '').replace(/\u00a0/g, ' ');
-                        const nextLabel = containsHtmlNoise(section.label || '') ? normalizePlainText(section.label || '') : section.label;
+                            const forcePlain = shouldForcePlainText(section);
+                            const nextValue = forcePlain ? normalizePlainText(section.value || '') : (section.value || '').replace(/\u00a0/g, ' ');
+                            const nextLabel = containsHtmlNoise(section.label || '') ? normalizePlainText(section.label || '') : section.label;
 
-                        return {
-                            ...section,
-                            label: nextLabel,
-                            value: nextValue,
-                            ...(section.url ? { url: toAbsoluteUrl(section.url) } : {}),
-                            order: normalizeOrder(section.order, sectionIndex)
-                        };
-                    })
+                            return {
+                                ...section,
+                                label: nextLabel,
+                                value: nextValue,
+                                ...(section.url ? { url: toAbsoluteUrl(section.url) } : {}),
+                                order: normalizeOrder(section.order, sectionIndex)
+                            };
+                        })
                         .sort((a, b) => normalizeOrder(a.order, 0) - normalizeOrder(b.order, 0)),
                     images: (page.images || [])
                         .map((img, imgIndex) => ({
@@ -3081,127 +3081,127 @@ const VisualEditor: React.FC = () => {
                     </div>
                 ) : (
                     <>
-                {iconField ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(54px, 1fr))', gap: '8px' }}>
-                            {CORE_VALUE_ICON_PRESETS.map((opt) => {
-                                const IconComponent = CORE_VALUE_ICON_COMPONENTS[opt];
-                                const selected = selectedIcon === opt;
-                                return (
-                                    <button
-                                        key={`${section.id}-${opt}`}
-                                        type="button"
-                                        title={opt}
-                                        onClick={() => handleSectionChange(pageIdx, section.id, 'value', opt)}
-                                        disabled={!editableValue}
-                                        style={{
-                                            height: '48px',
-                                            border: selected ? '1px solid #f97316' : '1px solid #e2e8f0',
-                                            borderRadius: '10px',
-                                            background: selected ? '#fff7ed' : '#fff',
-                                            color: selected ? '#ea580c' : '#475569',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            cursor: editableValue ? 'pointer' : 'not-allowed'
-                                        }}
-                                    >
-                                        <IconComponent size={18} />
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        {selectedIcon && !isKnownSelectedIcon && (
-                            <div style={{ fontSize: '11px', color: '#b45309', fontWeight: 700 }}>
-                                Naməlum ikon kodu: {selectedIcon}. Düzgün ikon seçin.
+                        {iconField ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(54px, 1fr))', gap: '8px' }}>
+                                    {CORE_VALUE_ICON_PRESETS.map((opt) => {
+                                        const IconComponent = CORE_VALUE_ICON_COMPONENTS[opt];
+                                        const selected = selectedIcon === opt;
+                                        return (
+                                            <button
+                                                key={`${section.id}-${opt}`}
+                                                type="button"
+                                                title={opt}
+                                                onClick={() => handleSectionChange(pageIdx, section.id, 'value', opt)}
+                                                disabled={!editableValue}
+                                                style={{
+                                                    height: '48px',
+                                                    border: selected ? '1px solid #f97316' : '1px solid #e2e8f0',
+                                                    borderRadius: '10px',
+                                                    background: selected ? '#fff7ed' : '#fff',
+                                                    color: selected ? '#ea580c' : '#475569',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: editableValue ? 'pointer' : 'not-allowed'
+                                                }}
+                                            >
+                                                <IconComponent size={18} />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {selectedIcon && !isKnownSelectedIcon && (
+                                    <div style={{ fontSize: '11px', color: '#b45309', fontWeight: 700 }}>
+                                        Naməlum ikon kodu: {selectedIcon}. Düzgün ikon seçin.
+                                    </div>
+                                )}
+                                {(showAdvancedEditor || !coreValueField) && (
+                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                                        Seçilmiş ikon: {selectedIcon || '-'}
+                                    </div>
+                                )}
+                            </div>
+                        ) : coreValueFieldType === 'title' ? (
+                            <input
+                                type="text"
+                                value={section.value || ''}
+                                onChange={(e) => handleSectionChange(pageIdx, section.id, 'value', e.target.value)}
+                                disabled={!editableValue}
+                                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 700 }}
+                            />
+                        ) : key || !shouldUseRichEditor(section) || coreValueFieldType === 'desc' ? (
+                            <textarea
+                                value={section.value || ''}
+                                onChange={(e) => handleSectionChange(pageIdx, section.id, 'value', e.target.value)}
+                                disabled={!editableValue}
+                                rows={coreValueFieldType === 'desc' ? 3 : textAreaRows}
+                                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', lineHeight: '1.4', resize: 'vertical' }}
+                            />
+                        ) : (
+                            <QuillEditor
+                                id={`editor-${section.id}`}
+                                value={bbcodeToHtmlForEditor(section.value || '')}
+                                onChange={(val: string) => handleSectionChange(pageIdx, section.id, 'value', val)}
+                                readOnly={!editableValue}
+                            />
+                        )}
+                        {hasUrlValue && showSectionActions && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '0.75rem' }}>
+                                <Globe size={14} style={{ color: '#94a3b8' }} />
+                                <input
+                                    type="text"
+                                    value={toAbsoluteUrl(section.url || '')}
+                                    onChange={(e) => handleSectionChange(pageIdx, section.id, 'url', e.target.value)}
+                                    onBlur={() => normalizeSectionUrl(pageIdx, section.id)}
+                                    disabled={!editableUrl}
+                                    placeholder="URL (Məs: /about veya https://...)"
+                                    style={{ fontSize: '12px', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', flex: 1 }}
+                                />
                             </div>
                         )}
-                        {(showAdvancedEditor || !coreValueField) && (
-                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
-                                Seçilmiş ikon: {selectedIcon || '-'}
-                            </div>
-                        )}
-                    </div>
-                ) : coreValueFieldType === 'title' ? (
-                    <input
-                        type="text"
-                        value={section.value || ''}
-                        onChange={(e) => handleSectionChange(pageIdx, section.id, 'value', e.target.value)}
-                        disabled={!editableValue}
-                        style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 700 }}
-                    />
-                ) : key || !shouldUseRichEditor(section) || coreValueFieldType === 'desc' ? (
-                    <textarea
-                        value={section.value || ''}
-                        onChange={(e) => handleSectionChange(pageIdx, section.id, 'value', e.target.value)}
-                        disabled={!editableValue}
-                        rows={coreValueFieldType === 'desc' ? 3 : textAreaRows}
-                        style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', lineHeight: '1.4', resize: 'vertical' }}
-                    />
-                ) : (
-                    <QuillEditor
-                        id={`editor-${section.id}`}
-                        value={bbcodeToHtmlForEditor(section.value || '')}
-                        onChange={(val: string) => handleSectionChange(pageIdx, section.id, 'value', val)}
-                        readOnly={!editableValue}
-                    />
-                )}
-                {hasUrlValue && showSectionActions && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '0.75rem' }}>
-                        <Globe size={14} style={{ color: '#94a3b8' }} />
-                        <input
-                            type="text"
-                            value={toAbsoluteUrl(section.url || '')}
-                            onChange={(e) => handleSectionChange(pageIdx, section.id, 'url', e.target.value)}
-                            onBlur={() => normalizeSectionUrl(pageIdx, section.id)}
-                            disabled={!editableUrl}
-                            placeholder="URL (Məs: /about veya https://...)"
-                            style={{ fontSize: '12px', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', flex: 1 }}
-                        />
-                    </div>
-                )}
-                {showSectionActions && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '0.9rem' }}>
-                        {!hasUrlValue && editableUrl && (
-                            <button
-                                title="Link əlavə et"
-                                onClick={() => handleSectionChange(pageIdx, section.id, 'url', `${window.location.origin}/`)}
-                                style={{ background: '#fff', border: '1px solid #dbeafe', color: '#2563eb', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '12px' }}
-                            >
-                                <Globe size={12} /> Link əlavə et
-                            </button>
-                        )}
-                        {showAdvancedEditor && (
-                            <>
-                                <button
-                                    title="Yuxarı daşı"
-                                    onClick={() => moveField('text', section.id, 'up', pageIdx)}
-                                    disabled={!canMoveUp}
-                                    style={{ background: '#fff', border: '1px solid #e2e8f0', color: canMoveUp ? '#334155' : '#cbd5e1', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: canMoveUp ? 'pointer' : 'not-allowed', fontSize: '12px' }}
-                                >
-                                    <ChevronUp size={12} /> Yuxarı
-                                </button>
-                                <button
-                                    title="Aşağı daşı"
-                                    onClick={() => moveField('text', section.id, 'down', pageIdx)}
-                                    disabled={!canMoveDown}
-                                    style={{ background: '#fff', border: '1px solid #e2e8f0', color: canMoveDown ? '#334155' : '#cbd5e1', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: canMoveDown ? 'pointer' : 'not-allowed', fontSize: '12px' }}
-                                >
-                                    <ChevronDown size={12} /> Aşağı
-                                </button>
-                                {deletable && (
+                        {showSectionActions && (
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '0.9rem' }}>
+                                {!hasUrlValue && editableUrl && (
                                     <button
-                                        className="field-delete-btn"
-                                        onClick={() => removeField('text', section.id, pageIdx)}
-                                        style={{ background: '#fff', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '12px' }}
+                                        title="Link əlavə et"
+                                        onClick={() => handleSectionChange(pageIdx, section.id, 'url', `${window.location.origin}/`)}
+                                        style={{ background: '#fff', border: '1px solid #dbeafe', color: '#2563eb', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '12px' }}
                                     >
-                                        <Trash2 size={12} /> Sil
+                                        <Globe size={12} /> Link əlavə et
                                     </button>
                                 )}
-                            </>
+                                {showAdvancedEditor && (
+                                    <>
+                                        <button
+                                            title="Yuxarı daşı"
+                                            onClick={() => moveField('text', section.id, 'up', pageIdx)}
+                                            disabled={!canMoveUp}
+                                            style={{ background: '#fff', border: '1px solid #e2e8f0', color: canMoveUp ? '#334155' : '#cbd5e1', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: canMoveUp ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                                        >
+                                            <ChevronUp size={12} /> Yuxarı
+                                        </button>
+                                        <button
+                                            title="Aşağı daşı"
+                                            onClick={() => moveField('text', section.id, 'down', pageIdx)}
+                                            disabled={!canMoveDown}
+                                            style={{ background: '#fff', border: '1px solid #e2e8f0', color: canMoveDown ? '#334155' : '#cbd5e1', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: canMoveDown ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                                        >
+                                            <ChevronDown size={12} /> Aşağı
+                                        </button>
+                                        {deletable && (
+                                            <button
+                                                className="field-delete-btn"
+                                                onClick={() => removeField('text', section.id, pageIdx)}
+                                                style={{ background: '#fff', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '12px' }}
+                                            >
+                                                <Trash2 size={12} /> Sil
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
                         )}
-                    </div>
-                )}
                     </>
                 )}
             </div>
@@ -3975,23 +3975,23 @@ const VisualEditor: React.FC = () => {
                                 (driverCategories.find(c => c.id === selectedCatId)?.drivers || [])
                                     .filter((d) => matchesSearch(d.name, d.license, d.team, d.rank, d.points, d.wins))
                                     .map((d) => (
-                                    <div key={d.id} className="page-nav-wrapper" style={{ position: 'relative', marginBottom: '4px' }}>
-                                        <button
-                                            className={`page-nav-item ${selectedDriverId === d.id ? 'active' : ''}`}
-                                            onClick={() => handleDriverSelect(d.id)}
-                                            style={{ width: '100%', paddingRight: '40px', textAlign: 'left' }}
-                                        >
-                                            <span style={{ fontWeight: '900', color: 'var(--primary)', marginRight: '8px' }}>#{d.rank}</span> {d.name}
-                                        </button>
-                                        <button
-                                            className="delete-section-btn"
-                                            onClick={(e) => { e.stopPropagation(); deleteDriver(d.id); }}
-                                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#ff4d4f', opacity: 0.5, cursor: 'pointer' }}
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                ))
+                                        <div key={d.id} className="page-nav-wrapper" style={{ position: 'relative', marginBottom: '4px' }}>
+                                            <button
+                                                className={`page-nav-item ${selectedDriverId === d.id ? 'active' : ''}`}
+                                                onClick={() => handleDriverSelect(d.id)}
+                                                style={{ width: '100%', paddingRight: '40px', textAlign: 'left' }}
+                                            >
+                                                <span style={{ fontWeight: '900', color: 'var(--primary)', marginRight: '8px' }}>#{d.rank}</span> {d.name}
+                                            </button>
+                                            <button
+                                                className="delete-section-btn"
+                                                onClick={(e) => { e.stopPropagation(); deleteDriver(d.id); }}
+                                                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#ff4d4f', opacity: 0.5, cursor: 'pointer' }}
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    ))
                             )}
                         </div>
                     </aside>
@@ -4252,6 +4252,11 @@ const VisualEditor: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
+                                <div className="editor-savebar">
+                                    <button className="btn-primary" onClick={saveChanges} disabled={isSaving}>
+                                        {isSaving ? 'Gözləyin...' : 'Yadda Saxla'}
+                                    </button>
+                                </div>
                             </div>
                         ) : (
                             <div className="editor-empty">
@@ -4460,6 +4465,11 @@ const VisualEditor: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
+                                <div className="editor-savebar">
+                                    <button className="btn-primary" onClick={saveChanges} disabled={isSaving}>
+                                        {isSaving ? 'Gözləyin...' : 'Yadda Saxla'}
+                                    </button>
+                                </div>
                             </div>
                         ) : (
                             <div className="editor-empty">
@@ -4629,328 +4639,328 @@ const VisualEditor: React.FC = () => {
                                             )}
 
                                             {(page.id !== 'marquee' || !isMarqueeCollapsed) && (
-                                            <>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                                                {page.id === 'about' && (
-                                                    <div className="field-item-wrapper" style={{ position: 'relative', background: '#fcfcfd', padding: '1rem', borderRadius: '12px', border: '1px solid #f0f0f2' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                                            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 800 }}>
-                                                                Statistikalar
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                className="add-field-minimal"
-                                                                onClick={() => addAboutStatRow(pageIdx)}
-                                                            >
-                                                                <Plus size={14} /> Yeni Statistika
-                                                            </button>
-                                                        </div>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                            {pageAboutStats.map((row) => (
-                                                                <div key={row.suffix} style={{ display: 'grid', gridTemplateColumns: '1fr 180px auto', gap: '8px', alignItems: 'center' }}>
-                                                                    <input
-                                                                        type="text"
-                                                                        value={row.label}
-                                                                        onChange={(e) => updateAboutStatField(row.suffix, 'label', e.target.value, pageIdx)}
-                                                                        placeholder="Statistika adı"
-                                                                        style={{ padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 700 }}
-                                                                    />
-                                                                    <input
-                                                                        type="text"
-                                                                        value={row.value}
-                                                                        onChange={(e) => updateAboutStatField(row.suffix, 'value', e.target.value, pageIdx)}
-                                                                        placeholder="Dəyər"
-                                                                        style={{ padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 700 }}
-                                                                    />
+                                                <>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                                                        {page.id === 'about' && (
+                                                            <div className="field-item-wrapper" style={{ position: 'relative', background: '#fcfcfd', padding: '1rem', borderRadius: '12px', border: '1px solid #f0f0f2' }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                                                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 800 }}>
+                                                                        Statistikalar
+                                                                    </div>
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => removeAboutStatRow(row.suffix, pageIdx)}
-                                                                        style={{ background: '#fff', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                                                        className="add-field-minimal"
+                                                                        onClick={() => addAboutStatRow(pageIdx)}
                                                                     >
-                                                                        <Trash2 size={14} />
+                                                                        <Plus size={14} /> Yeni Statistika
                                                                     </button>
                                                                 </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {page.id === 'rulespage' && (
-                                                    <div className="field-item-wrapper" style={{ position: 'relative', background: '#fcfcfd', padding: '1rem', borderRadius: '12px', border: '1px solid #f0f0f2' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                                            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 800 }}>
-                                                                Qaydalar Sekmələri
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                className="add-field-minimal"
-                                                                onClick={() => addRulesTab(pageIdx)}
-                                                            >
-                                                                <Plus size={14} /> Yeni Sekmə
-                                                            </button>
-                                                        </div>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                            {pageRuleTabs.map((row, rowIndex) => {
-                                                                const canMoveUp = rowIndex > 0;
-                                                                const canMoveDown = rowIndex < pageRuleTabs.length - 1;
-                                                                return (
-                                                                    <div key={`rules-tab-group-${row.index}-${row.id}`} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px', background: '#fff' }}>
-                                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px 160px auto', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                    {pageAboutStats.map((row) => (
+                                                                        <div key={row.suffix} style={{ display: 'grid', gridTemplateColumns: '1fr 180px auto', gap: '8px', alignItems: 'center' }}>
                                                                             <input
                                                                                 type="text"
-                                                                                value={row.title}
-                                                                                onChange={(e) => updateRulesTabField(rowIndex, 'title', e.target.value, pageIdx)}
-                                                                                placeholder="Sekmə başlığı"
-                                                                                style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}
+                                                                                value={row.label}
+                                                                                onChange={(e) => updateAboutStatField(row.suffix, 'label', e.target.value, pageIdx)}
+                                                                                placeholder="Statistika adı"
+                                                                                style={{ padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 700 }}
                                                                             />
                                                                             <input
                                                                                 type="text"
-                                                                                value={row.id}
-                                                                                onChange={(e) => updateRulesTabField(rowIndex, 'id', e.target.value, pageIdx)}
-                                                                                placeholder="Sekmə ID"
-                                                                                style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                                                                            />
-                                                                            <select
-                                                                                value={row.icon}
-                                                                                onChange={(e) => updateRulesTabField(rowIndex, 'icon', e.target.value, pageIdx)}
-                                                                                style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                                                                            >
-                                                                                {RULE_TAB_ICON_PRESETS.map((opt) => (
-                                                                                    <option key={opt} value={opt}>{opt}</option>
-                                                                                ))}
-                                                                            </select>
-                                                                            <div style={{ display: 'flex', gap: '6px' }}>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    title="Yuxarı"
-                                                                                    onClick={() => moveRulesTab(rowIndex, 'up', pageIdx)}
-                                                                                    disabled={!canMoveUp}
-                                                                                    style={{ width: '30px', height: '30px', border: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px', color: canMoveUp ? '#334155' : '#cbd5e1' }}
-                                                                                >
-                                                                                    <ChevronUp size={14} />
-                                                                                </button>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    title="Aşağı"
-                                                                                    onClick={() => moveRulesTab(rowIndex, 'down', pageIdx)}
-                                                                                    disabled={!canMoveDown}
-                                                                                    style={{ width: '30px', height: '30px', border: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px', color: canMoveDown ? '#334155' : '#cbd5e1' }}
-                                                                                >
-                                                                                    <ChevronDown size={14} />
-                                                                                </button>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    title="Sekməni sil"
-                                                                                    onClick={() => removeRulesTab(rowIndex, pageIdx)}
-                                                                                    style={{ width: '30px', height: '30px', border: '1px solid #fee2e2', background: '#fff', borderRadius: '8px', color: '#ef4444' }}
-                                                                                >
-                                                                                    <Trash2 size={14} />
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: '8px', marginBottom: '8px' }}>
-                                                                            <input
-                                                                                type="text"
-                                                                                value={row.docName || ''}
-                                                                                onChange={(e) => updateRulesTabField(rowIndex, 'docName', e.target.value, pageIdx)}
-                                                                                placeholder="Sənəd adı (Məs: PILOT_PROTOKOLU.PDF)"
-                                                                                style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                                                                            />
-                                                                            <input
-                                                                                type="text"
-                                                                                value={row.docButton || ''}
-                                                                                onChange={(e) => updateRulesTabField(rowIndex, 'docButton', e.target.value, pageIdx)}
-                                                                                placeholder="Düymə mətni (Məs: PDF YÜKLƏ)"
-                                                                                style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                                                                            />
-                                                                        </div>
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                                                            <Globe size={14} style={{ color: '#94a3b8' }} />
-                                                                            <input
-                                                                                type="text"
-                                                                                value={row.docUrl || ''}
-                                                                                onChange={(e) => updateRulesTabField(rowIndex, 'docUrl', e.target.value, pageIdx)}
-                                                                                placeholder="Sənəd linki (Məs: /uploads/pilot.pdf və ya https://...)"
-                                                                                style={{ width: '100%', padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                                                                            />
-                                                                            <input
-                                                                                id={`rules-doc-upload-${pageIdx}-${rowIndex}`}
-                                                                                type="file"
-                                                                                accept=".pdf,application/pdf"
-                                                                                style={{ display: 'none' }}
-                                                                                onChange={async (e) => {
-                                                                                    const f = e.target.files?.[0];
-                                                                                    if (!f) return;
-                                                                                    await handleRulesTabPdfUpload(f, rowIndex, pageIdx);
-                                                                                    e.target.value = '';
-                                                                                }}
+                                                                                value={row.value}
+                                                                                onChange={(e) => updateAboutStatField(row.suffix, 'value', e.target.value, pageIdx)}
+                                                                                placeholder="Dəyər"
+                                                                                style={{ padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 700 }}
                                                                             />
                                                                             <button
                                                                                 type="button"
-                                                                                className="btn-secondary"
-                                                                                onClick={() => document.getElementById(`rules-doc-upload-${pageIdx}-${rowIndex}`)?.click()}
+                                                                                onClick={() => removeAboutStatRow(row.suffix, pageIdx)}
+                                                                                style={{ background: '#fff', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: '8px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                                                                             >
-                                                                                PDF Yüklə
+                                                                                <Trash2 size={14} />
                                                                             </button>
                                                                         </div>
-                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                                            {(row.items || []).map((item, itemIndex) => (
-                                                                                <div key={`rules-tab-item-group-${row.index}-${item.index}`} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px' }}>
-                                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', marginBottom: '8px' }}>
-                                                                                        <input
-                                                                                            type="text"
-                                                                                            value={item.title}
-                                                                                            onChange={(e) => updateRulesTabItemField(rowIndex, itemIndex, 'title', e.target.value, pageIdx)}
-                                                                                            placeholder="Maddə başlığı"
-                                                                                            style={{ padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}
-                                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {page.id === 'rulespage' && (
+                                                            <div className="field-item-wrapper" style={{ position: 'relative', background: '#fcfcfd', padding: '1rem', borderRadius: '12px', border: '1px solid #f0f0f2' }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                                                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 800 }}>
+                                                                        Qaydalar Sekmələri
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="add-field-minimal"
+                                                                        onClick={() => addRulesTab(pageIdx)}
+                                                                    >
+                                                                        <Plus size={14} /> Yeni Sekmə
+                                                                    </button>
+                                                                </div>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                                    {pageRuleTabs.map((row, rowIndex) => {
+                                                                        const canMoveUp = rowIndex > 0;
+                                                                        const canMoveDown = rowIndex < pageRuleTabs.length - 1;
+                                                                        return (
+                                                                            <div key={`rules-tab-group-${row.index}-${row.id}`} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px', background: '#fff' }}>
+                                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px 160px auto', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={row.title}
+                                                                                        onChange={(e) => updateRulesTabField(rowIndex, 'title', e.target.value, pageIdx)}
+                                                                                        placeholder="Sekmə başlığı"
+                                                                                        style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}
+                                                                                    />
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={row.id}
+                                                                                        onChange={(e) => updateRulesTabField(rowIndex, 'id', e.target.value, pageIdx)}
+                                                                                        placeholder="Sekmə ID"
+                                                                                        style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                                                                    />
+                                                                                    <select
+                                                                                        value={row.icon}
+                                                                                        onChange={(e) => updateRulesTabField(rowIndex, 'icon', e.target.value, pageIdx)}
+                                                                                        style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                                                                    >
+                                                                                        {RULE_TAB_ICON_PRESETS.map((opt) => (
+                                                                                            <option key={opt} value={opt}>{opt}</option>
+                                                                                        ))}
+                                                                                    </select>
+                                                                                    <div style={{ display: 'flex', gap: '6px' }}>
                                                                                         <button
                                                                                             type="button"
-                                                                                            title="Maddəni sil"
-                                                                                            onClick={() => removeRulesTabItem(rowIndex, itemIndex, pageIdx)}
+                                                                                            title="Yuxarı"
+                                                                                            onClick={() => moveRulesTab(rowIndex, 'up', pageIdx)}
+                                                                                            disabled={!canMoveUp}
+                                                                                            style={{ width: '30px', height: '30px', border: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px', color: canMoveUp ? '#334155' : '#cbd5e1' }}
+                                                                                        >
+                                                                                            <ChevronUp size={14} />
+                                                                                        </button>
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            title="Aşağı"
+                                                                                            onClick={() => moveRulesTab(rowIndex, 'down', pageIdx)}
+                                                                                            disabled={!canMoveDown}
+                                                                                            style={{ width: '30px', height: '30px', border: '1px solid #e2e8f0', background: '#fff', borderRadius: '8px', color: canMoveDown ? '#334155' : '#cbd5e1' }}
+                                                                                        >
+                                                                                            <ChevronDown size={14} />
+                                                                                        </button>
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            title="Sekməni sil"
+                                                                                            onClick={() => removeRulesTab(rowIndex, pageIdx)}
                                                                                             style={{ width: '30px', height: '30px', border: '1px solid #fee2e2', background: '#fff', borderRadius: '8px', color: '#ef4444' }}
                                                                                         >
                                                                                             <Trash2 size={14} />
                                                                                         </button>
                                                                                     </div>
-                                                                                    <textarea
-                                                                                        rows={3}
-                                                                                        value={item.desc}
-                                                                                        onChange={(e) => updateRulesTabItemField(rowIndex, itemIndex, 'desc', e.target.value, pageIdx)}
-                                                                                        placeholder="Maddə təsviri"
-                                                                                        style={{ width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', lineHeight: 1.4, resize: 'vertical' }}
+                                                                                </div>
+                                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px', gap: '8px', marginBottom: '8px' }}>
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={row.docName || ''}
+                                                                                        onChange={(e) => updateRulesTabField(rowIndex, 'docName', e.target.value, pageIdx)}
+                                                                                        placeholder="Sənəd adı (Məs: PILOT_PROTOKOLU.PDF)"
+                                                                                        style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                                                                    />
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={row.docButton || ''}
+                                                                                        onChange={(e) => updateRulesTabField(rowIndex, 'docButton', e.target.value, pageIdx)}
+                                                                                        placeholder="Düymə mətni (Məs: PDF YÜKLƏ)"
+                                                                                        style={{ padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
                                                                                     />
                                                                                 </div>
-                                                                            ))}
-                                                                            <button
-                                                                                type="button"
-                                                                                className="add-field-minimal"
-                                                                                onClick={() => addRulesTabItem(rowIndex, pageIdx)}
-                                                                            >
-                                                                                <Plus size={14} /> Maddə Əlavə Et
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {page.id === 'partners' && renderPartnersEditor(page, pageIdx)}
-
-                                                {pageSections.map((section, visibleIndex) =>
-                                                    renderTextSectionCard(section, visibleIndex, pageIdx, page)
-                                                )}
-                                            </div>
-
-                                            {page.id !== 'partners' && (
-                                            <div style={{ marginTop: '1rem' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>
-                                                        Şəkillər
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        className="add-field-minimal"
-                                                        onClick={() => {
-                                                            const newPages = [...pages];
-                                                            const target = newPages[pageIdx];
-                                                            if (!target) return;
-                                                            target.images.push({
-                                                                id: `img-${target.images.length}-${Date.now()}`,
-                                                                path: '',
-                                                                alt: '',
-                                                                type: 'local',
-                                                                order: target.images.length
-                                                            });
-                                                            setPages(newPages);
-                                                        }}
-                                                    >
-                                                        <Plus size={14} /> Yeni Şəkil
-                                                    </button>
-                                                </div>
-                                                <div className="images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
-                                                    {pageImages.length === 0 && (
-                                                        <div className="empty-fields-tip" style={{ gridColumn: '1/-1', textAlign: 'center', padding: '1rem', border: '1px dashed #cbd5e1', borderRadius: '10px', color: '#64748b' }}>
-                                                            Bu bölmədə şəkil yoxdur.
-                                                        </div>
-                                                    )}
-                                                    {pageImages.map((img) => (
-                                                        <div key={`${page.id}-${img.id}`} className="image-edit-card" style={{ border: '1px solid #eee', borderRadius: '12px', padding: '0.75rem', background: '#fff' }}>
-                                                            <div style={{ height: '120px', background: '#f8fafc', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                {img.path ? (
-                                                                    <img src={img.path} alt={img.alt || img.id} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                                ) : (
-                                                                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Önizləmə yoxdur</span>
-                                                                )}
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                                                                    <Globe size={14} style={{ color: '#94a3b8' }} />
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={row.docUrl || ''}
+                                                                                        onChange={(e) => updateRulesTabField(rowIndex, 'docUrl', e.target.value, pageIdx)}
+                                                                                        placeholder="Sənəd linki (Məs: /uploads/pilot.pdf və ya https://...)"
+                                                                                        style={{ width: '100%', padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                                                                                    />
+                                                                                    <input
+                                                                                        id={`rules-doc-upload-${pageIdx}-${rowIndex}`}
+                                                                                        type="file"
+                                                                                        accept=".pdf,application/pdf"
+                                                                                        style={{ display: 'none' }}
+                                                                                        onChange={async (e) => {
+                                                                                            const f = e.target.files?.[0];
+                                                                                            if (!f) return;
+                                                                                            await handleRulesTabPdfUpload(f, rowIndex, pageIdx);
+                                                                                            e.target.value = '';
+                                                                                        }}
+                                                                                    />
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="btn-secondary"
+                                                                                        onClick={() => document.getElementById(`rules-doc-upload-${pageIdx}-${rowIndex}`)?.click()}
+                                                                                    >
+                                                                                        PDF Yüklə
+                                                                                    </button>
+                                                                                </div>
+                                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                                    {(row.items || []).map((item, itemIndex) => (
+                                                                                        <div key={`rules-tab-item-group-${row.index}-${item.index}`} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px' }}>
+                                                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', marginBottom: '8px' }}>
+                                                                                                <input
+                                                                                                    type="text"
+                                                                                                    value={item.title}
+                                                                                                    onChange={(e) => updateRulesTabItemField(rowIndex, itemIndex, 'title', e.target.value, pageIdx)}
+                                                                                                    placeholder="Maddə başlığı"
+                                                                                                    style={{ padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}
+                                                                                                />
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    title="Maddəni sil"
+                                                                                                    onClick={() => removeRulesTabItem(rowIndex, itemIndex, pageIdx)}
+                                                                                                    style={{ width: '30px', height: '30px', border: '1px solid #fee2e2', background: '#fff', borderRadius: '8px', color: '#ef4444' }}
+                                                                                                >
+                                                                                                    <Trash2 size={14} />
+                                                                                                </button>
+                                                                                            </div>
+                                                                                            <textarea
+                                                                                                rows={3}
+                                                                                                value={item.desc}
+                                                                                                onChange={(e) => updateRulesTabItemField(rowIndex, itemIndex, 'desc', e.target.value, pageIdx)}
+                                                                                                placeholder="Maddə təsviri"
+                                                                                                style={{ width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', lineHeight: 1.4, resize: 'vertical' }}
+                                                                                            />
+                                                                                        </div>
+                                                                                    ))}
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="add-field-minimal"
+                                                                                        onClick={() => addRulesTabItem(rowIndex, pageIdx)}
+                                                                                    >
+                                                                                        <Plus size={14} /> Maddə Əlavə Et
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
                                                             </div>
-                                                            <input
-                                                                type="text"
-                                                                value={img.path}
-                                                                placeholder="Tam şəkil linki"
-                                                                onChange={(e) => {
-                                                                    const newPages = [...pages];
-                                                                    const target = newPages[pageIdx];
-                                                                    if (!target) return;
-                                                                    const idx = target.images.findIndex((i) => i.id === img.id);
-                                                                    if (idx === -1) return;
-                                                                    target.images[idx].path = e.target.value;
-                                                                    setPages(newPages);
-                                                                }}
-                                                                style={{ width: '100%', fontSize: '12px', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', marginBottom: '8px' }}
-                                                            />
-                                                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                                                <input
-                                                                    id={`group-file-up-${page.id}-${img.id}`}
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    style={{ display: 'none' }}
-                                                                    onChange={async (e) => {
-                                                                        const f = e.target.files?.[0];
-                                                                        if (!f) return;
-                                                                        const url = await uploadImage(f);
-                                                                        if (!url) return;
+                                                        )}
+
+                                                        {page.id === 'partners' && renderPartnersEditor(page, pageIdx)}
+
+                                                        {pageSections.map((section, visibleIndex) =>
+                                                            renderTextSectionCard(section, visibleIndex, pageIdx, page)
+                                                        )}
+                                                    </div>
+
+                                                    {page.id !== 'partners' && (
+                                                        <div style={{ marginTop: '1rem' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                                                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>
+                                                                    Şəkillər
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    className="add-field-minimal"
+                                                                    onClick={() => {
                                                                         const newPages = [...pages];
                                                                         const target = newPages[pageIdx];
                                                                         if (!target) return;
-                                                                        const idx = target.images.findIndex((i) => i.id === img.id);
-                                                                        if (idx === -1) return;
-                                                                        target.images[idx].path = url;
-                                                                        target.images[idx].type = 'local';
+                                                                        target.images.push({
+                                                                            id: `img-${target.images.length}-${Date.now()}`,
+                                                                            path: '',
+                                                                            alt: '',
+                                                                            type: 'local',
+                                                                            order: target.images.length
+                                                                        });
                                                                         setPages(newPages);
                                                                     }}
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    className="btn-secondary"
-                                                                    onClick={() => document.getElementById(`group-file-up-${page.id}-${img.id}`)?.click()}
-                                                                    style={{ fontSize: '11px', padding: '6px 10px' }}
                                                                 >
-                                                                    Fayldan yüklə
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    className="btn-secondary"
-                                                                    onClick={() => openImageSelector(pageIdx, img.id)}
-                                                                    style={{ fontSize: '11px', padding: '6px 10px' }}
-                                                                >
-                                                                    Kitabxanadan seç
+                                                                    <Plus size={14} /> Yeni Şəkil
                                                                 </button>
                                                             </div>
-                                                            <input
-                                                                type="text"
-                                                                value={img.alt}
-                                                                placeholder="Alt mətni"
-                                                                onChange={(e) => handleImageAltChange(pageIdx, img.id, e.target.value)}
-                                                                style={{ width: '100%', fontSize: '12px', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
-                                                            />
+                                                            <div className="images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
+                                                                {pageImages.length === 0 && (
+                                                                    <div className="empty-fields-tip" style={{ gridColumn: '1/-1', textAlign: 'center', padding: '1rem', border: '1px dashed #cbd5e1', borderRadius: '10px', color: '#64748b' }}>
+                                                                        Bu bölmədə şəkil yoxdur.
+                                                                    </div>
+                                                                )}
+                                                                {pageImages.map((img) => (
+                                                                    <div key={`${page.id}-${img.id}`} className="image-edit-card" style={{ border: '1px solid #eee', borderRadius: '12px', padding: '0.75rem', background: '#fff' }}>
+                                                                        <div style={{ height: '120px', background: '#f8fafc', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                            {img.path ? (
+                                                                                <img src={img.path} alt={img.alt || img.id} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                            ) : (
+                                                                                <span style={{ fontSize: '11px', color: '#94a3b8' }}>Önizləmə yoxdur</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={img.path}
+                                                                            placeholder="Tam şəkil linki"
+                                                                            onChange={(e) => {
+                                                                                const newPages = [...pages];
+                                                                                const target = newPages[pageIdx];
+                                                                                if (!target) return;
+                                                                                const idx = target.images.findIndex((i) => i.id === img.id);
+                                                                                if (idx === -1) return;
+                                                                                target.images[idx].path = e.target.value;
+                                                                                setPages(newPages);
+                                                                            }}
+                                                                            style={{ width: '100%', fontSize: '12px', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', marginBottom: '8px' }}
+                                                                        />
+                                                                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                                                            <input
+                                                                                id={`group-file-up-${page.id}-${img.id}`}
+                                                                                type="file"
+                                                                                accept="image/*"
+                                                                                style={{ display: 'none' }}
+                                                                                onChange={async (e) => {
+                                                                                    const f = e.target.files?.[0];
+                                                                                    if (!f) return;
+                                                                                    const url = await uploadImage(f);
+                                                                                    if (!url) return;
+                                                                                    const newPages = [...pages];
+                                                                                    const target = newPages[pageIdx];
+                                                                                    if (!target) return;
+                                                                                    const idx = target.images.findIndex((i) => i.id === img.id);
+                                                                                    if (idx === -1) return;
+                                                                                    target.images[idx].path = url;
+                                                                                    target.images[idx].type = 'local';
+                                                                                    setPages(newPages);
+                                                                                }}
+                                                                            />
+                                                                            <button
+                                                                                type="button"
+                                                                                className="btn-secondary"
+                                                                                onClick={() => document.getElementById(`group-file-up-${page.id}-${img.id}`)?.click()}
+                                                                                style={{ fontSize: '11px', padding: '6px 10px' }}
+                                                                            >
+                                                                                Fayldan yüklə
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                className="btn-secondary"
+                                                                                onClick={() => openImageSelector(pageIdx, img.id)}
+                                                                                style={{ fontSize: '11px', padding: '6px 10px' }}
+                                                                            >
+                                                                                Kitabxanadan seç
+                                                                            </button>
+                                                                        </div>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={img.alt}
+                                                                            placeholder="Alt mətni"
+                                                                            onChange={(e) => handleImageAltChange(pageIdx, img.id, e.target.value)}
+                                                                            style={{ width: '100%', fontSize: '12px', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
+                                                                        />
+                                                                    </div>
+                                                                ))}
+                                                            </div>
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            )}
-                                            </>
+                                                    )}
+                                                </>
                                             )}
 
                                             {isMarqueeCollapsed && (
@@ -5217,237 +5227,238 @@ const VisualEditor: React.FC = () => {
                                     )}
 
                                     {currentPage.id !== 'rulespage' && currentPage.id !== 'partners' && (
-                                    <div className="field-group">
-                                        <div className="field-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <label><Type size={16} /> Mətn Sahələri</label>
-                                            {showAdvancedEditor && (
-                                                <button className="add-field-minimal" onClick={() => addField('text')}>
-                                                    <Plus size={14} /> Mətn Əlavə Et
+                                        <div className="field-group">
+                                            <div className="field-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <label><Type size={16} /> Mətn Sahələri</label>
+                                                {showAdvancedEditor && (
+                                                    <button className="add-field-minimal" onClick={() => addField('text')}>
+                                                        <Plus size={14} /> Mətn Əlavə Et
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                                {displayedSections.length === 0 && searchTerm ? (
+                                                    <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
+                                                        Bu səhifədə sorğuya uyğun mətn tapılmadı.
+                                                    </div>
+                                                ) : currentPage?.id === 'contactpage' ? (
+                                                    contactGroupedSections.map((group) => (
+                                                        <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', padding: '12px' }}>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', padding: '4px 2px 8px 2px', borderBottom: '1px solid #e2e8f0' }}>
+                                                                <div style={{ fontSize: '12px', color: '#334155', fontWeight: 900, textTransform: 'uppercase' }}>
+                                                                    {group.title}
+                                                                </div>
+                                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                                                                    {group.subtitle}
+                                                                </div>
+                                                            </div>
+                                                            {group.sections.map((section, index) => renderTextSectionCard(section, index))}
+                                                        </div>
+                                                    ))
+                                                ) : (currentPage?.id === 'privacypolicypage' || currentPage?.id === 'termsofservicepage') ? (
+                                                    legalGroupedSections.map((group) => (
+                                                        <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', padding: '12px' }}>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', padding: '4px 2px 8px 2px', borderBottom: '1px solid #e2e8f0' }}>
+                                                                <div style={{ fontSize: '12px', color: '#334155', fontWeight: 900, textTransform: 'uppercase' }}>
+                                                                    {group.title}
+                                                                </div>
+                                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                                                                    {group.subtitle}
+                                                                </div>
+                                                            </div>
+                                                            {group.sections.map((section, index) => renderTextSectionCard(section, index))}
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    displayedSections.map((section, visibleIndex) => renderTextSectionCard(section, visibleIndex))
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {currentPage.id !== 'partners' && (
+                                        <div className="field-group">
+                                            <div className="field-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <label><ImageIcon size={16} /> Bölmədəki Şəkillər</label>
+                                                <button className="add-field-minimal" onClick={() => addField('image')}>
+                                                    <Plus size={14} /> Yeni Şəkil Yeri
                                                 </button>
-                                            )}
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                            {displayedSections.length === 0 && searchTerm ? (
-                                                <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
-                                                    Bu səhifədə sorğuya uyğun mətn tapılmadı.
-                                                </div>
-                                            ) : currentPage?.id === 'contactpage' ? (
-                                                contactGroupedSections.map((group) => (
-                                                    <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', padding: '12px' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', padding: '4px 2px 8px 2px', borderBottom: '1px solid #e2e8f0' }}>
-                                                            <div style={{ fontSize: '12px', color: '#334155', fontWeight: 900, textTransform: 'uppercase' }}>
-                                                                {group.title}
-                                                            </div>
-                                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
-                                                                {group.subtitle}
-                                                            </div>
-                                                        </div>
-                                                        {group.sections.map((section, index) => renderTextSectionCard(section, index))}
+                                            </div>
+                                            {displayedImages.length > 0 && (
+                                                <div style={{ marginBottom: '1rem' }}>
+                                                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#64748b', marginBottom: '8px' }}>
+                                                        Komponent Daxili Önizləmə (Sıra ilə)
                                                     </div>
-                                                ))
-                                            ) : (currentPage?.id === 'privacypolicypage' || currentPage?.id === 'termsofservicepage') ? (
-                                                legalGroupedSections.map((group) => (
-                                                    <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc', padding: '12px' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', padding: '4px 2px 8px 2px', borderBottom: '1px solid #e2e8f0' }}>
-                                                            <div style={{ fontSize: '12px', color: '#334155', fontWeight: 900, textTransform: 'uppercase' }}>
-                                                                {group.title}
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
+                                                        {displayedImages.map((img, idx) => (
+                                                            <div key={`preview-${img.id}`} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', background: '#fff' }}>
+                                                                <div style={{ height: '84px', background: '#f8fafc' }}>
+                                                                    {img.path ? (
+                                                                        <img src={img.path} alt={img.alt || `Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                    ) : (
+                                                                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '11px' }}>
+                                                                            Şəkil yoxdur
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div style={{ padding: '6px 8px', fontSize: '10px', color: '#475569', fontWeight: 700 }}>
+                                                                    #{idx + 1}{showAdvancedEditor ? ` • ${img.id}` : ''}
+                                                                </div>
                                                             </div>
-                                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
-                                                                {group.subtitle}
-                                                            </div>
-                                                        </div>
-                                                        {group.sections.map((section, index) => renderTextSectionCard(section, index))}
+                                                        ))}
                                                     </div>
-                                                ))
-                                            ) : (
-                                                displayedSections.map((section, visibleIndex) => renderTextSectionCard(section, visibleIndex))
-                                            )}
-                                        </div>
-                                    </div>
-                                    )}
-
-                                    {currentPage.id !== 'partners' && (
-                                    <div className="field-group">
-                                        <div className="field-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <label><ImageIcon size={16} /> Bölmədəki Şəkillər</label>
-                                            <button className="add-field-minimal" onClick={() => addField('image')}>
-                                                <Plus size={14} /> Yeni Şəkil Yeri
-                                            </button>
-                                        </div>
-                                        {displayedImages.length > 0 && (
-                                            <div style={{ marginBottom: '1rem' }}>
-                                                <div style={{ fontSize: '12px', fontWeight: 800, color: '#64748b', marginBottom: '8px' }}>
-                                                    Komponent Daxili Önizləmə (Sıra ilə)
                                                 </div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
-                                                    {displayedImages.map((img, idx) => (
-                                                        <div key={`preview-${img.id}`} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', background: '#fff' }}>
-                                                            <div style={{ height: '84px', background: '#f8fafc' }}>
-                                                                {img.path ? (
-                                                                    <img src={img.path} alt={img.alt || `Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                                ) : (
-                                                                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '11px' }}>
-                                                                        Şəkil yoxdur
-                                                                    </div>
+                                            )}
+                                            <div className="images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.5rem' }}>
+                                                {displayedImages.length > 0 ? (
+                                                    displayedImages.map((img, visibleIndex) => {
+                                                        const realImages = currentPage?.images || [];
+                                                        const realIndex = realImages.findIndex(i => i.id === img.id);
+                                                        const canMoveUp = realIndex > 0;
+                                                        const canMoveDown = realIndex >= 0 && realIndex < realImages.length - 1;
+                                                        return (
+                                                            <div key={img.id} className="image-edit-card" style={{ border: '1px solid #eee', borderRadius: '12px', overflow: 'hidden', background: '#fff', position: 'relative' }}>
+                                                                {showAdvancedEditor && (
+                                                                    <>
+                                                                        <button
+                                                                            className="field-delete-btn"
+                                                                            onClick={() => removeField('image', img.id)}
+                                                                            style={{ position: 'absolute', right: '8px', top: '8px', zIndex: 10, background: 'rgba(255,255,255,0.9)', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                                                        >
+                                                                            <Trash2 size={12} />
+                                                                        </button>
+                                                                        <div style={{ position: 'absolute', right: '40px', top: '8px', zIndex: 10, display: 'flex', gap: '6px' }}>
+                                                                            <button
+                                                                                title="Yuxarı daşı"
+                                                                                onClick={() => moveField('image', img.id, 'up')}
+                                                                                disabled={!canMoveUp}
+                                                                                style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', color: canMoveUp ? '#334155' : '#cbd5e1', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canMoveUp ? 'pointer' : 'not-allowed' }}
+                                                                            >
+                                                                                <ChevronUp size={12} />
+                                                                            </button>
+                                                                            <button
+                                                                                title="Aşağı daşı"
+                                                                                onClick={() => moveField('image', img.id, 'down')}
+                                                                                disabled={!canMoveDown}
+                                                                                style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', color: canMoveDown ? '#334155' : '#cbd5e1', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canMoveDown ? 'pointer' : 'not-allowed' }}
+                                                                            >
+                                                                                <ChevronDown size={12} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </>
                                                                 )}
-                                                            </div>
-                                                            <div style={{ padding: '6px 8px', fontSize: '10px', color: '#475569', fontWeight: 700 }}>
-                                                                #{idx + 1}{showAdvancedEditor ? ` • ${img.id}` : ''}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                        <div className="images-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.5rem' }}>
-                                            {displayedImages.length > 0 ? (
-                                                displayedImages.map((img, visibleIndex) => {
-                                                    const realImages = currentPage?.images || [];
-                                                    const realIndex = realImages.findIndex(i => i.id === img.id);
-                                                    const canMoveUp = realIndex > 0;
-                                                    const canMoveDown = realIndex >= 0 && realIndex < realImages.length - 1;
-                                                    return (
-                                                    <div key={img.id} className="image-edit-card" style={{ border: '1px solid #eee', borderRadius: '12px', overflow: 'hidden', background: '#fff', position: 'relative' }}>
-                                                        {showAdvancedEditor && (
-                                                            <>
-                                                                <button
-                                                                    className="field-delete-btn"
-                                                                    onClick={() => removeField('image', img.id)}
-                                                                    style={{ position: 'absolute', right: '8px', top: '8px', zIndex: 10, background: 'rgba(255,255,255,0.9)', border: '1px solid #fee2e2', color: '#ef4444', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                                                >
-                                                                    <Trash2 size={12} />
-                                                                </button>
-                                                                <div style={{ position: 'absolute', right: '40px', top: '8px', zIndex: 10, display: 'flex', gap: '6px' }}>
-                                                                    <button
-                                                                        title="Yuxarı daşı"
-                                                                        onClick={() => moveField('image', img.id, 'up')}
-                                                                        disabled={!canMoveUp}
-                                                                        style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', color: canMoveUp ? '#334155' : '#cbd5e1', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canMoveUp ? 'pointer' : 'not-allowed' }}
-                                                                    >
-                                                                        <ChevronUp size={12} />
-                                                                    </button>
-                                                                    <button
-                                                                        title="Aşağı daşı"
-                                                                        onClick={() => moveField('image', img.id, 'down')}
-                                                                        disabled={!canMoveDown}
-                                                                        style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', color: canMoveDown ? '#334155' : '#cbd5e1', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canMoveDown ? 'pointer' : 'not-allowed' }}
-                                                                    >
-                                                                        <ChevronDown size={12} />
-                                                                    </button>
+                                                                <div style={{ height: '120px', background: '#f8fafc', position: 'relative', overflow: 'hidden' }}>
+                                                                    {img.path && (img.path.startsWith('http') || img.path.startsWith('/')) ? (
+                                                                        <img src={img.path} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                    ) : (
+                                                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9' }}>
+                                                                            <ImageIcon size={32} style={{ opacity: 0.1 }} />
+                                                                            <span style={{ fontSize: '10px', color: '#999', position: 'absolute', bottom: '10px' }}>Yol yoxdur</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                            </>
-                                                        )}
-                                                        <div style={{ height: '120px', background: '#f8fafc', position: 'relative', overflow: 'hidden' }}>
-                                                            {img.path && (img.path.startsWith('http') || img.path.startsWith('/')) ? (
-                                                                <img src={img.path} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                            ) : (
-                                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9' }}>
-                                                                    <ImageIcon size={32} style={{ opacity: 0.1 }} />
-                                                                    <span style={{ fontSize: '10px', color: '#999', position: 'absolute', bottom: '10px' }}>Yol yoxdur</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div style={{ padding: '0.75rem' }}>
-                                                            <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, marginBottom: '6px' }}>
-                                                                Sıra: {visibleIndex + 1}
-                                                            </div>
-                                                            <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '4px' }}>
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Resur yolu..."
-                                                                    value={img.path}
-                                                                    onChange={(e) => {
-                                                                        if (selectedPageIndex < 0 || selectedPageIndex >= pages.length) return;
-                                                                        const newPages = [...pages];
-                                                                        const targetPage = newPages[selectedPageIndex];
-                                                                        if (!targetPage) return;
-                                                                        const realIdx = targetPage.images.findIndex(i => i.id === img.id);
-                                                                        if (realIdx !== -1) {
-                                                                            targetPage.images[realIdx].path = e.target.value;
-                                                                            setPages(newPages);
-                                                                        }
-                                                                    }}
-                                                                    style={{ fontSize: '0.75rem', flex: 1, padding: '0.4rem', border: '1px solid #eee', borderRadius: '4px' }}
-                                                                />
-                                                                <button
-                                                                    onClick={() => openImageSelector(selectedPageIndex, img.id)}
-                                                                    title="Sistemdən seç"
-                                                                    style={{ padding: '0 8px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: 'pointer' }}
-                                                                >
-                                                                    <Globe size={14} />
-                                                                </button>
-                                                                <div style={{ position: 'relative' }}>
+                                                                <div style={{ padding: '0.75rem' }}>
+                                                                    <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700, marginBottom: '6px' }}>
+                                                                        Sıra: {visibleIndex + 1}
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '4px' }}>
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Resur yolu..."
+                                                                            value={img.path}
+                                                                            onChange={(e) => {
+                                                                                if (selectedPageIndex < 0 || selectedPageIndex >= pages.length) return;
+                                                                                const newPages = [...pages];
+                                                                                const targetPage = newPages[selectedPageIndex];
+                                                                                if (!targetPage) return;
+                                                                                const realIdx = targetPage.images.findIndex(i => i.id === img.id);
+                                                                                if (realIdx !== -1) {
+                                                                                    targetPage.images[realIdx].path = e.target.value;
+                                                                                    setPages(newPages);
+                                                                                }
+                                                                            }}
+                                                                            style={{ fontSize: '0.75rem', flex: 1, padding: '0.4rem', border: '1px solid #eee', borderRadius: '4px' }}
+                                                                        />
+                                                                        <button
+                                                                            onClick={() => openImageSelector(selectedPageIndex, img.id)}
+                                                                            title="Sistemdən seç"
+                                                                            style={{ padding: '0 8px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: 'pointer' }}
+                                                                        >
+                                                                            <Globe size={14} />
+                                                                        </button>
+                                                                        <div style={{ position: 'relative' }}>
+                                                                            <input
+                                                                                type="file"
+                                                                                id={`file-up-${img.id}`}
+                                                                                style={{ display: 'none' }}
+                                                                                accept="image/*"
+                                                                                onChange={(e) => handleFileUpload(e, selectedPageIndex, img.id)}
+                                                                            />
+                                                                            <button
+                                                                                onClick={() => document.getElementById(`file-up-${img.id}`)?.click()}
+                                                                                title="Kompüterdən yüklə"
+                                                                                style={{ padding: '0 8px', height: '100%', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                            >
+                                                                                <Plus size={14} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
                                                                     <input
-                                                                        type="file"
-                                                                        id={`file-up-${img.id}`}
-                                                                        style={{ display: 'none' }}
-                                                                        accept="image/*"
-                                                                        onChange={(e) => handleFileUpload(e, selectedPageIndex, img.id)}
+                                                                        type="text"
+                                                                        placeholder="Alt mətni..."
+                                                                        value={img.alt}
+                                                                        onChange={(e) => handleImageAltChange(selectedPageIndex, img.id, e.target.value)}
+                                                                        style={{ fontSize: '0.75rem', width: '100%', padding: '0.4rem', border: '1px solid #eee', borderRadius: '4px' }}
                                                                     />
-                                                                    <button
-                                                                        onClick={() => document.getElementById(`file-up-${img.id}`)?.click()}
-                                                                        title="Kompüterdən yüklə"
-                                                                        style={{ padding: '0 8px', height: '100%', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                                                    >
-                                                                        <Plus size={14} />
-                                                                    </button>
                                                                 </div>
                                                             </div>
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Alt mətni..."
-                                                                value={img.alt}
-                                                                onChange={(e) => handleImageAltChange(selectedPageIndex, img.id, e.target.value)}
-                                                                style={{ fontSize: '0.75rem', width: '100%', padding: '0.4rem', border: '1px solid #eee', borderRadius: '4px' }}
-                                                            />
-                                                        </div>
+                                                        )
+                                                    })) : (
+                                                    <div className="empty-fields-tip" style={{ gridColumn: '1/-1', textAlign: 'center', padding: '2rem', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', color: '#64748b' }}>
+                                                        {searchTerm ? 'Sorğuya uyğun şəkil tapılmadı.' : 'Bu bölmədə redaktə ediləcək şəkil yoxdur.'}
                                                     </div>
-                                                )})) : (
-                                                <div className="empty-fields-tip" style={{ gridColumn: '1/-1', textAlign: 'center', padding: '2rem', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', color: '#64748b' }}>
-                                                    {searchTerm ? 'Sorğuya uyğun şəkil tapılmadı.' : 'Bu bölmədə redaktə ediləcək şəkil yoxdur.'}
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
                                     )}
 
                                     {currentPage.id !== 'partners' && (
-                                    <div className="field-group">
-                                        <label><ImageIcon size={16} /> Yeni Şəkil Yüklə</label>
-                                        <div className="upload-dropzone">
-                                            <Plus size={24} />
-                                            <p>Şəkil yükləmək üçün seçin</p>
-                                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                                <button className="btn-secondary" onClick={() => {
-                                                    const input = document.createElement('input');
-                                                    input.type = 'file';
-                                                    input.accept = 'image/*';
-                                                    input.onchange = async (e) => {
-                                                        const file = (e.target as HTMLInputElement).files?.[0];
-                                                        if (!file) return;
-                                                        const url = await uploadImage(file);
-                                                        if (url && selectedPageIndex >= 0 && selectedPageIndex < pages.length) {
-                                                            const newPages = [...pages];
-                                                            const targetPage = newPages[selectedPageIndex];
-                                                            if (targetPage) {
-                                                                const newId = `img-${targetPage.images.length}-${Date.now()}`;
-                                                                targetPage.images.push({ id: newId, path: url, alt: '', type: 'local' });
-                                                                setPages(newPages);
-                                                                toast.success('Yeni şəkil əlavə edildi');
+                                        <div className="field-group">
+                                            <label><ImageIcon size={16} /> Yeni Şəkil Yüklə</label>
+                                            <div className="upload-dropzone">
+                                                <Plus size={24} />
+                                                <p>Şəkil yükləmək üçün seçin</p>
+                                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                                    <button className="btn-secondary" onClick={() => {
+                                                        const input = document.createElement('input');
+                                                        input.type = 'file';
+                                                        input.accept = 'image/*';
+                                                        input.onchange = async (e) => {
+                                                            const file = (e.target as HTMLInputElement).files?.[0];
+                                                            if (!file) return;
+                                                            const url = await uploadImage(file);
+                                                            if (url && selectedPageIndex >= 0 && selectedPageIndex < pages.length) {
+                                                                const newPages = [...pages];
+                                                                const targetPage = newPages[selectedPageIndex];
+                                                                if (targetPage) {
+                                                                    const newId = `img-${targetPage.images.length}-${Date.now()}`;
+                                                                    targetPage.images.push({ id: newId, path: url, alt: '', type: 'local' });
+                                                                    setPages(newPages);
+                                                                    toast.success('Yeni şəkil əlavə edildi');
+                                                                }
                                                             }
-                                                        }
-                                                    };
-                                                    input.click();
-                                                }}>Cihazdan Yüklə</button>
-                                                <button className="btn-secondary" onClick={() => {
-                                                    const dummyId = `img-${(currentPage.images || []).length}`;
-                                                    setActiveImageField({ pageIdx: selectedPageIndex, imgId: dummyId }); // Temporary for next add
-                                                    setIsAddingNewFromSystem(true);
-                                                    setIsImageSelectorOpen(true);
-                                                }}>Kitabxanadan Seç</button>
+                                                        };
+                                                        input.click();
+                                                    }}>Cihazdan Yüklə</button>
+                                                    <button className="btn-secondary" onClick={() => {
+                                                        const dummyId = `img-${(currentPage.images || []).length}`;
+                                                        setActiveImageField({ pageIdx: selectedPageIndex, imgId: dummyId }); // Temporary for next add
+                                                        setIsAddingNewFromSystem(true);
+                                                        setIsImageSelectorOpen(true);
+                                                    }}>Kitabxanadan Seç</button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
                                     )}
                                 </div>
                             </>

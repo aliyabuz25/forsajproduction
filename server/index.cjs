@@ -378,6 +378,7 @@ const persistSiteStruct = async (value) => {
 
     for (const resourceId of SITE_NEW_STRUCT_RESOURCE_IDS) {
         const resourceData = normalizeListResource(next.resources?.[resourceId]);
+        await saveContentToDB(resourceId, resourceData);
         if (await saveContentToFile(resourceId, resourceData)) legacySaved = true;
     }
 

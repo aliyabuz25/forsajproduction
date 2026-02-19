@@ -29,12 +29,17 @@ const DEFAULT_ALBUM_KEYS = new Set([
   'ümumi arxiv',
   'umumi arxiv',
   'general archive',
-  'default'
-]);
+  'default',
+  'archive',
+  'arxiv'
+].map(k => k.normalize('NFC')));
 
-const normalizeAlbumName = (value: unknown) => String(value ?? '').trim();
+const normalizeAlbumName = (value: unknown) => String(value ?? '').trim().normalize('NFC');
 const normalizeAlbumKey = (value: string) => normalizeAlbumName(value).toLowerCase();
-const isNamedAlbum = (value: string) => !DEFAULT_ALBUM_KEYS.has(normalizeAlbumKey(value));
+const isNamedAlbum = (value: string) => {
+  const key = normalizeAlbumKey(value);
+  return key !== '' && !DEFAULT_ALBUM_KEYS.has(key);
+};
 
 const GalleryPage: React.FC = () => {
   const [activeType, setActiveType] = useState<'photos' | 'videos'>('photos');
@@ -64,7 +69,12 @@ const GalleryPage: React.FC = () => {
           album
         };
       })
-      .filter((photo): photo is PreparedPhoto => photo !== null);
+      .filter((photo): photo is PreparedPhoto => photo !== null)
+      .sort((a, b) => {
+        const idA = parseFloat(a.id) || 0;
+        const idB = parseFloat(b.id) || 0;
+        return idB - idA;
+      });
   }, [dynamicPhotos]);
 
   const photoGridItems = useMemo<PhotoGridItem[]>(() => {
