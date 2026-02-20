@@ -11,59 +11,55 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
   const { getPage, getText, language, setSiteLanguage } = useSiteContent('navbar');
   const { getImage: getImageGeneral } = useSiteContent('general');
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const GOOGLE_TRANSLATE_CONTAINER_ID = 'google_translate_element';
-  const GOOGLE_TRANSLATE_SCRIPT_ID = 'google-translate-script';
+  const GTRANSLATE_SCRIPT_ID = 'gtranslate-widget-script';
+  const GTRANSLATE_WRAPPER_CLASS = 'gtranslate_wrapper';
   const languageMap: Record<string, string> = { AZ: 'az', RU: 'ru', ENG: 'en' };
 
-  const ensureGoogleTranslate = () => {
+  const applyGTranslateLanguage = (langCode: string, attempt = 0) => {
+    const select =
+      (document.querySelector(`.${GTRANSLATE_WRAPPER_CLASS} .gt_selector`) as HTMLSelectElement | null)
+      || (document.querySelector('.gt_selector') as HTMLSelectElement | null);
+    if (select) {
+      select.value = langCode;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
+    }
+    if (attempt < 20) {
+      window.setTimeout(() => applyGTranslateLanguage(langCode, attempt + 1), 250);
+    }
+  };
+
+  const ensureGTranslate = () => {
     const w = window as any;
-    const mountTranslate = () => {
-      if (!w.google?.translate?.TranslateElement) return;
-      const container = document.getElementById(GOOGLE_TRANSLATE_CONTAINER_ID);
-      if (!container) return;
-      if (container.childElementCount > 0) return;
-      new w.google.translate.TranslateElement(
-        {
-          pageLanguage: 'az',
-          autoDisplay: false,
-          includedLanguages: 'az,ru,en'
-        },
-        GOOGLE_TRANSLATE_CONTAINER_ID
-      );
+
+    w.gtranslateSettings = {
+      default_language: 'az',
+      languages: ['az', 'ru', 'en'],
+      native_language_names: true,
+      wrapper_selector: `.${GTRANSLATE_WRAPPER_CLASS}`
     };
 
-    w.googleTranslateElementInit = mountTranslate;
-    mountTranslate();
-
-    if (!document.getElementById(GOOGLE_TRANSLATE_SCRIPT_ID)) {
+    if (!document.getElementById(GTRANSLATE_SCRIPT_ID)) {
       const script = document.createElement('script');
-      script.id = GOOGLE_TRANSLATE_SCRIPT_ID;
-      script.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-      script.async = true;
+      script.id = GTRANSLATE_SCRIPT_ID;
+      script.src = 'https://cdn.gtranslate.net/widgets/latest/dropdown.js';
+      script.defer = true;
       document.body.appendChild(script);
     }
   };
 
-  const applyGoogleLanguage = (langCode: string) => {
-    const tryApply = (attempt = 0) => {
-      const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
-      if (select) {
-        select.value = langCode;
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-        return;
-      }
-      if (attempt < 20) {
-        window.setTimeout(() => tryApply(attempt + 1), 250);
-      }
-    };
-
-    ensureGoogleTranslate();
-    tryApply();
+  const applySiteLanguage = (langCode: string) => {
+    ensureGTranslate();
+    applyGTranslateLanguage(langCode);
   };
 
   useEffect(() => {
-    ensureGoogleTranslate();
+    ensureGTranslate();
   }, []);
+
+  useEffect(() => {
+    applySiteLanguage(languageMap[language] || 'az');
+  }, [language]);
 
   const navbarPage = getPage('navbar');
   const logoImg = getImageGeneral('SITE_LOGO_LIGHT').path;
@@ -262,28 +258,29 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
         ))}
       </div>
 
-      <div className="relative">
+      <div className="language-picker">
         <button
+          type="button"
           onClick={() => setIsLangOpen(!isLangOpen)}
-          className="flex items-center gap-2 group cursor-pointer bg-white/5 px-4 py-2 rounded-sm border border-white/10 hover:border-[#FF4D00]/50 transition-all"
+          className="language-picker__trigger"
         >
-          <Globe className="w-4 h-4 text-gray-500 group-hover:text-[#FF4D00]" />
-          <span className="text-[11px] font-black italic text-white">{language}</span>
-          <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
+          <Globe className="language-picker__globe" />
+          <span className="language-picker__current">{language}</span>
+          <ChevronDown className={`language-picker__chevron ${isLangOpen ? 'language-picker__chevron--open' : ''}`} />
         </button>
 
         {isLangOpen && (
-          <div className="absolute right-0 mt-3 w-28 bg-[#111] border border-white/10 shadow-2xl z-50 py-2 rounded-sm overflow-hidden">
+          <div className="language-picker__menu">
             {languages.map((lang) => (
               <button
                 key={lang}
+                type="button"
                 onClick={() => {
                   setSiteLanguage(lang as any);
-                  applyGoogleLanguage(languageMap[lang] || 'az');
+                  applySiteLanguage(languageMap[lang] || 'az');
                   setIsLangOpen(false);
                 }}
-                className={`w-full text-left px-5 py-3 text-[10px] font-black italic hover:bg-[#FF4D00] hover:text-black transition-all ${language === lang ? 'text-[#FF4D00]' : 'text-gray-500'
-                  }`}
+                className={`language-picker__item ${language === lang ? 'language-picker__item--active' : ''}`}
               >
                 {lang}
               </button>
@@ -291,7 +288,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, onViewChange }) => {
           </div>
         )}
       </div>
-      <div id={GOOGLE_TRANSLATE_CONTAINER_ID} style={{ display: 'none' }} />
+      <div className={GTRANSLATE_WRAPPER_CLASS} style={{ display: 'none' }} />
     </nav>
   );
 };
